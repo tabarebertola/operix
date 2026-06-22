@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Pago exitoso — Operix</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:#050505;color:#eee;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.card{background:#111;border:1px solid #1e1e1e;border-radius:20px;padding:44px 36px;text-align:center;max-width:400px;width:90%;}
+.check{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#1D9E75,#2ecc71);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px;animation:pop 0.4s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes pop{from{transform:scale(0);opacity:0;}to{transform:scale(1);opacity:1;}}
+h2{font-size:22px;font-weight:600;margin-bottom:8px;}
+p{font-size:14px;color:#666;line-height:1.6;margin-bottom:28px;}
+.btn{display:inline-block;padding:13px 32px;background:linear-gradient(135deg,#185FA5,#1a6bbf);color:#fff;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;box-shadow:0 4px 16px rgba(24,95,165,0.3);}
+.loading{font-size:13px;color:#444;margin-top:16px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="check">✓</div>
+  <h2>¡Pago exitoso!</h2>
+  <p id="msg">Activando tu suscripción...</p>
+  <div class="loading" id="loading">Un momento...</div>
+</div>
+
+<script>
+const SUPA_URL = 'https://fbmcqpuohcaffillaund.supabase.co';
+const SUPA_KEY = 'sb_publishable_Bx24U3RsiRJEukDf3CkbNA_OW8pKiN-';
+const { createClient } = supabase;
+const sb = createClient(SUPA_URL, SUPA_KEY, {
+  auth: { persistSession: true, storageKey: 'operix-auth', storage: window.localStorage, autoRefreshToken: true }
+});
+
+const URLS = {
+  lubricentro: 'https://stockpro-liard.vercel.app',
+  vinoteca: 'https://stockpro-liard.vercel.app',
+  almacen: 'https://stockpro-liard.vercel.app'
+};
+
+(async function(){
+  const params = new URLSearchParams(window.location.search);
+  const rubro = params.get('rubro') || '';
+  const rubroNombre = decodeURIComponent(params.get('rubroNombre') || '');
+  const userId = params.get('userId') || '';
+  const status = params.get('status') || '';
+  const collectionStatus = params.get('collection_status') || '';
+
+  if(status !== 'approved' && collectionStatus !== 'approved'){
+    document.getElementById('msg').textContent = 'Hubo un problema con el pago. Volvé a intentarlo.';
+    document.getElementById('loading').innerHTML = '<a href="/" style="color:#185FA5;">Volver a Operix</a>';
+    return;
+  }
+
+  // Activar suscripcion en Supabase
+  const vence = new Date();
+  vence.setDate(vence.getDate() + 30);
+
+  await sb.from('usuarios').update({
+    plan: 'Completo',
+    rubro: rubro,
+    activo: true,
+    fecha_inicio: new Date().toISOString(),
+    fecha_vencimiento: vence.toISOString()
+  }).eq('id', userId);
+
+  const sistemaUrl = URLS[rubro] || 'https://stockpro-liard.vercel.app';
+
+  document.getElementById('msg').textContent = `Tu suscripción de ${rubroNombre} está activa. Te llevamos a tu sistema.`;
+  document.getElementById('loading').innerHTML = `<a class="btn" href="${sistemaUrl}">Abrir mi sistema →</a>`;
+
+  // Redirigir automaticamente en 3 segundos
+  setTimeout(() => { window.location.href = sistemaUrl; }, 3000);
+})();
+</script>
+</body>
+</html>

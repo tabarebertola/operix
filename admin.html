@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Operix Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#eee;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+
+/* LOGIN */
+.login-card{background:#141414;border:1px solid #222;border-radius:16px;padding:36px 32px;width:100%;max-width:340px;}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
+.login-logo svg{width:28px;height:28px;}
+.login-logo span{font-size:18px;font-weight:600;}
+.login-card h2{font-size:20px;font-weight:600;margin-bottom:6px;}
+.login-card p{font-size:13px;color:#666;margin-bottom:24px;}
+.field{margin-bottom:14px;}
+.field label{font-size:12px;color:#888;display:block;margin-bottom:5px;font-weight:500;}
+.field input{width:100%;padding:10px 14px;font-size:14px;border:1px solid #2a2a2a;border-bottom:2px solid #333;border-radius:8px;background:#1a1a1a;color:#eee;font-family:'Inter',sans-serif;outline:none;transition:all 0.15s;}
+.field input:focus{border-color:#185FA5;background:#1e2a3a;}
+.btn{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:1px solid #333;background:transparent;color:#eee;font-family:'Inter',sans-serif;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{background:#1a1a1a;}
+.btn-primary{background:#185FA5;color:#fff;border-color:#185FA5;}
+.btn-primary:hover{background:#0C447C;}
+.btn-danger{background:#c0392b;color:#fff;border-color:#c0392b;}
+.btn-danger:hover{background:#a93226;}
+.btn-sm{padding:6px 14px;font-size:12px;}
+.err{font-size:13px;color:#e74c3c;margin-bottom:14px;display:none;}
+.err.show{display:block;}
+
+/* DASHBOARD */
+.dashboard{display:none;min-height:100vh;width:100%;align-items:flex-start;}
+.dashboard.show{display:flex;}
+.sidebar{width:220px;background:#111;border-right:1px solid #1e1e1e;min-height:100vh;padding:20px 0;flex-shrink:0;}
+.sidebar-brand{display:flex;align-items:center;gap:8px;padding:4px 16px 20px;border-bottom:1px solid #1e1e1e;margin-bottom:8px;}
+.sidebar-brand svg{width:24px;height:24px;}
+.sidebar-brand span{font-size:16px;font-weight:600;}
+.sidebar-brand .badge{font-size:10px;background:#185FA5;color:#fff;padding:2px 8px;border-radius:20px;font-weight:500;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;color:#888;cursor:pointer;transition:all 0.1s;border-radius:0;}
+.nav-item:hover{background:#1a1a1a;color:#eee;}
+.nav-item.active{background:#1a2a3a;color:#378ADD;}
+.nav-item i{font-size:17px;}
+.nav-section{font-size:10px;color:#444;padding:14px 16px 4px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;}
+.main{flex:1;padding:32px;}
+.page-title{font-size:22px;font-weight:600;margin-bottom:4px;}
+.page-sub{font-size:13px;color:#666;margin-bottom:28px;}
+
+/* CARDS */
+.card{background:#141414;border:1px solid #1e1e1e;border-radius:12px;padding:24px;margin-bottom:20px;}
+.card h3{font-size:15px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card h3 i{font-size:18px;color:#185FA5;}
+.field-dark{margin-bottom:14px;}
+.field-dark label{font-size:12px;color:#888;display:block;margin-bottom:5px;font-weight:500;}
+.field-dark input,.field-dark select,.field-dark textarea{width:100%;padding:10px 14px;font-size:14px;border:1px solid #2a2a2a;border-radius:8px;background:#1a1a1a;color:#eee;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.15s;}
+.field-dark input:focus,.field-dark select:focus,.field-dark textarea:focus{border-color:#185FA5;}
+.field-dark textarea{resize:vertical;min-height:80px;}
+.toggle-wrap{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #1e1e1e;}
+.toggle-wrap:last-child{border-bottom:none;}
+.toggle-label strong{display:block;font-size:14px;font-weight:500;}
+.toggle-label span{font-size:12px;color:#666;}
+.toggle{width:44px;height:24px;background:#333;border-radius:12px;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
+.toggle.on{background:#185FA5;}
+.toggle::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left 0.2s;}
+.toggle.on::after{left:23px;}
+
+/* RUBROS */
+.rubro-row{display:flex;align-items:center;gap:12px;padding:12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;margin-bottom:8px;}
+.rubro-emoji{font-size:22px;width:36px;text-align:center;}
+.rubro-name{flex:1;font-size:14px;font-weight:500;}
+.rubro-url{font-size:12px;color:#666;font-family:monospace;}
+.rubro-actions{display:flex;gap:6px;align-items:center;}
+
+/* CLIENTES */
+.clientes-table{width:100%;border-collapse:collapse;font-size:13px;}
+.clientes-table th{text-align:left;padding:8px 12px;font-size:11px;color:#666;border-bottom:1px solid #1e1e1e;font-weight:500;}
+.clientes-table td{padding:10px 12px;border-bottom:1px solid #1a1a1a;color:#ccc;}
+.clientes-table tr:last-child td{border-bottom:none;}
+.badge-activo{background:#1a3a2a;color:#4ade80;font-size:11px;padding:2px 8px;border-radius:20px;}
+.badge-vencido{background:#3a1a1a;color:#f87171;font-size:11px;padding:2px 8px;border-radius:20px;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:20px;}
+.stat-card{background:#141414;border:1px solid #1e1e1e;border-radius:10px;padding:16px;}
+.stat-label{font-size:11px;color:#666;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;}
+.stat-val{font-size:26px;font-weight:600;color:#eee;}
+.stat-sub{font-size:11px;color:#185FA5;margin-top:4px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:#185FA5;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:9999;display:none;animation:slideIn 0.2s ease;}
+.toast.show{display:block;}
+@keyframes slideIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal-box{background:#141414;border:1px solid #222;border-radius:16px;padding:28px;width:100%;max-width:420px;}
+.modal-box h3{font-size:17px;font-weight:600;margin-bottom:20px;}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 28 28">
+        <circle cx="5" cy="5" r="2.8" fill="#185FA5"/>
+        <circle cx="23" cy="5" r="2.8" fill="#185FA5"/>
+        <circle cx="5" cy="23" r="2.8" fill="#185FA5"/>
+        <circle cx="23" cy="23" r="2.8" fill="#185FA5"/>
+        <rect x="9" y="3.5" width="10" height="3" rx="1.5" fill="#185FA5" opacity="0.45"/>
+        <rect x="9" y="21.5" width="10" height="3" rx="1.5" fill="#185FA5" opacity="0.45"/>
+        <rect x="3.5" y="9" width="3" height="10" rx="1.5" fill="#185FA5" opacity="0.45"/>
+        <rect x="21.5" y="9" width="3" height="10" rx="1.5" fill="#185FA5" opacity="0.45"/>
+      </svg>
+      <span>Operix</span>
+    </div>
+    <h2>Panel Admin</h2>
+    <p>Acceso restringido — solo para administradores</p>
+    <div class="err" id="login-err">Contraseña incorrecta</div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="admin-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()"/>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="adminLogin()">Ingresar</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="dashboard">
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <svg viewBox="0 0 28 28">
+        <circle cx="5" cy="5" r="2.8" fill="#185FA5"/>
+        <circle cx="23" cy="5" r="2.8" fill="#185FA5"/>
+        <circle cx="5" cy="23" r="2.8" fill="#185FA5"/>
+        <circle cx="23" cy="23" r="2.8" fill="#185FA5"/>
+        <rect x="9" y="3.5" width="10" height="3" rx="1.5" fill="#185FA5" opacity="0.45"/>
+        <rect x="9" y="21.5" width="10" height="3" rx="1.5" fill="#185FA5" opacity="0.45"/>
+        <rect x="3.5" y="9" width="3" height="10" rx="1.5" fill="#185FA5" opacity="0.45"/>
+        <rect x="21.5" y="9" width="3" height="10" rx="1.5" fill="#185FA5" opacity="0.45"/>
+      </svg>
+      <span>Operix</span>
+      <span class="badge">Admin</span>
+    </div>
+    <div class="nav-section">Principal</div>
+    <div class="nav-item active" onclick="showPage('clientes')"><i class="ti ti-users"></i> Clientes</div>
+    <div class="nav-item" onclick="showPage('config')"><i class="ti ti-settings"></i> Configuración</div>
+    <div class="nav-item" onclick="showPage('rubros')"><i class="ti ti-apps"></i> Rubros</div>
+    <div class="nav-section">Sistema</div>
+    <div class="nav-item" onclick="adminLogout()"><i class="ti ti-logout"></i> Salir</div>
+  </div>
+  <div class="main">
+
+    <!-- CLIENTES -->
+    <div id="page-clientes">
+      <div class="page-title">Clientes</div>
+      <div class="page-sub">Todos los usuarios registrados en Operix</div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Total registrados</div><div class="stat-val" id="st-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">Con plan activo</div><div class="stat-val" id="st-activos">—</div></div>
+        <div class="stat-card"><div class="stat-label">Sin plan</div><div class="stat-val" id="st-sinplan">—</div></div>
+      </div>
+      <div class="card">
+        <table class="clientes-table">
+          <thead><tr><th>Nombre</th><th>Email</th><th>Rubro</th><th>Plan</th><th>Estado</th><th>Vence</th></tr></thead>
+          <tbody id="clientes-tbody"><tr><td colspan="6" style="text-align:center;color:#444;padding:24px;">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="page-config" style="display:none;">
+      <div class="page-title">Configuración</div>
+      <div class="page-sub">Cambios se aplican automáticamente para todos los usuarios</div>
+
+      <div class="card">
+        <h3><i class="ti ti-cash"></i> Precio y plan</h3>
+        <div class="field-dark">
+          <label>Precio mensual (en pesos, sin puntos)</label>
+          <input type="number" id="cfg-precio" placeholder="29990"/>
+        </div>
+        <div class="toggle-wrap">
+          <div class="toggle-label">
+            <strong>Período de prueba gratis</strong>
+            <span>Si está activo, los nuevos usuarios no pagan hasta que termine la prueba</span>
+          </div>
+          <div class="toggle" id="tog-prueba" onclick="toggleSwitch('tog-prueba','cfg-prueba')"></div>
+          <input type="hidden" id="cfg-prueba" value="true"/>
+        </div>
+        <div class="field-dark" style="margin-top:14px;">
+          <label>Días de prueba gratis</label>
+          <input type="number" id="cfg-dias" placeholder="30"/>
+        </div>
+        <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarConfig()"><i class="ti ti-device-floppy"></i> Guardar cambios</button>
+      </div>
+
+      <div class="card">
+        <h3><i class="ti ti-lock"></i> Contraseña admin</h3>
+        <div class="field-dark">
+          <label>Nueva contraseña</label>
+          <input type="password" id="cfg-newpass" placeholder="Nueva contraseña"/>
+        </div>
+        <button class="btn btn-primary" onclick="cambiarPass()"><i class="ti ti-key"></i> Cambiar contraseña</button>
+      </div>
+    </div>
+
+    <!-- RUBROS -->
+    <div id="page-rubros" style="display:none;">
+      <div class="page-title">Rubros</div>
+      <div class="page-sub">Activá, desactivá o agregá rubros. Los cambios se ven al instante en Operix.</div>
+      <div class="card">
+        <h3><i class="ti ti-apps"></i> Rubros activos</h3>
+        <div id="rubros-list">Cargando...</div>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="abrirModalRubro()">
+          <i class="ti ti-plus"></i> Agregar rubro
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL NUEVO RUBRO -->
+<div class="modal-overlay" id="modal-rubro">
+  <div class="modal-box">
+    <h3>Nuevo rubro</h3>
+    <div class="field-dark"><label>ID (sin espacios, minúsculas)</label><input id="nr-id" placeholder="fiamberia"/></div>
+    <div class="field-dark"><label>Nombre visible</label><input id="nr-nombre" placeholder="Fiambería"/></div>
+    <div class="field-dark"><label>Emoji</label><input id="nr-emoji" placeholder="🥩"/></div>
+    <div class="field-dark"><label>URL del sistema (Vercel)</label><input id="nr-url" placeholder="https://mi-sistema.vercel.app"/></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="cerrarModalRubro()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarRubro()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://fbmcqpuohcaffillaund.supabase.co';
+const SUPA_KEY = 'sb_publishable_Bx24U3RsiRJEukDf3CkbNA_OW8pKiN-';
+const { createClient } = supabase;
+const sb = createClient(SUPA_URL, SUPA_KEY);
+
+let CONFIG = {};
+let adminLoggedIn = false;
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+async function adminLogin() {
+  const pass = document.getElementById('admin-pass').value;
+  const { data } = await sb.from('config').select('valor').eq('clave','admin_password').single();
+  if (data && data.valor === pass) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').classList.add('show');
+    adminLoggedIn = true;
+    cargarTodo();
+  } else {
+    document.getElementById('login-err').classList.add('show');
+  }
+}
+
+function adminLogout() {
+  document.getElementById('login-screen').style.display = '';
+  document.getElementById('dashboard').classList.remove('show');
+  document.getElementById('admin-pass').value = '';
+  adminLoggedIn = false;
+}
+
+async function cargarTodo() {
+  await cargarConfig();
+  await cargarClientes();
+}
+
+async function cargarConfig() {
+  const { data } = await sb.from('config').select('*');
+  if (data) {
+    data.forEach(row => {
+      CONFIG[row.clave] = row.valor;
+    });
+  }
+  // Aplicar en UI
+  if (CONFIG.precio_plan) document.getElementById('cfg-precio').value = CONFIG.precio_plan;
+  if (CONFIG.dias_prueba) document.getElementById('cfg-dias').value = CONFIG.dias_prueba;
+  const pruebaActiva = CONFIG.prueba_activa === 'true';
+  document.getElementById('cfg-prueba').value = pruebaActiva ? 'true' : 'false';
+  const tog = document.getElementById('tog-prueba');
+  if (pruebaActiva) tog.classList.add('on'); else tog.classList.remove('on');
+  renderRubros();
+}
+
+async function cargarClientes() {
+  const { data } = await sb.from('usuarios').select('*').order('created_at', {ascending:false});
+  if (!data) return;
+  const total = data.length;
+  const conPlan = data.filter(u => u.plan).length;
+  const sinPlan = data.filter(u => !u.plan).length;
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-activos').textContent = conPlan;
+  document.getElementById('st-sinplan').textContent = sinPlan;
+
+  const tbody = document.getElementById('clientes-tbody');
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#444;padding:24px;">Sin clientes aún</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(u => {
+    const vence = u.fecha_vencimiento ? new Date(u.fecha_vencimiento) : null;
+    const activo = vence && vence > new Date();
+    const venceStr = vence ? vence.toLocaleDateString('es-AR') : '—';
+    const badge = u.plan
+      ? (activo ? '<span class="badge-activo">Activo</span>' : '<span class="badge-vencido">Vencido</span>')
+      : '<span style="color:#444;font-size:12px;">Sin plan</span>';
+    return `<tr>
+      <td>${u.nombre||'—'}</td>
+      <td>${u.email||'—'}</td>
+      <td>${u.rubro||'—'}</td>
+      <td>${u.plan||'—'}</td>
+      <td>${badge}</td>
+      <td>${venceStr}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderRubros() {
+  const rubros = JSON.parse(CONFIG.rubros || '[]');
+  const el = document.getElementById('rubros-list');
+  el.innerHTML = rubros.map((r, i) => `
+    <div class="rubro-row">
+      <div class="rubro-emoji">${r.emoji}</div>
+      <div>
+        <div class="rubro-name">${r.nombre}</div>
+        <div class="rubro-url">${r.url || 'Sin URL asignada'}</div>
+      </div>
+      <div class="rubro-actions">
+        <div class="toggle ${r.activo?'on':''}" onclick="toggleRubro(${i})"></div>
+        <button class="btn btn-danger btn-sm" onclick="borrarRubro(${i})"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function toggleRubro(i) {
+  const rubros = JSON.parse(CONFIG.rubros || '[]');
+  rubros[i].activo = !rubros[i].activo;
+  CONFIG.rubros = JSON.stringify(rubros);
+  await sb.from('config').upsert({clave:'rubros', valor:CONFIG.rubros});
+  renderRubros();
+  toast(rubros[i].nombre + (rubros[i].activo ? ' activado' : ' desactivado'));
+}
+
+async function borrarRubro(i) {
+  if (!confirm('¿Borrar este rubro?')) return;
+  const rubros = JSON.parse(CONFIG.rubros || '[]');
+  rubros.splice(i, 1);
+  CONFIG.rubros = JSON.stringify(rubros);
+  await sb.from('config').upsert({clave:'rubros', valor:CONFIG.rubros});
+  renderRubros();
+  toast('Rubro eliminado');
+}
+
+function abrirModalRubro() {
+  document.getElementById('modal-rubro').classList.add('show');
+}
+function cerrarModalRubro() {
+  document.getElementById('modal-rubro').classList.remove('show');
+}
+
+async function guardarRubro() {
+  const id = document.getElementById('nr-id').value.trim();
+  const nombre = document.getElementById('nr-nombre').value.trim();
+  const emoji = document.getElementById('nr-emoji').value.trim();
+  const url = document.getElementById('nr-url').value.trim();
+  if (!id || !nombre) { toast('Completá al menos ID y nombre'); return; }
+  const rubros = JSON.parse(CONFIG.rubros || '[]');
+  rubros.push({id, nombre, emoji: emoji||'🏪', url, activo:true});
+  CONFIG.rubros = JSON.stringify(rubros);
+  await sb.from('config').upsert({clave:'rubros', valor:CONFIG.rubros});
+  renderRubros();
+  cerrarModalRubro();
+  toast('Rubro agregado');
+}
+
+async function guardarConfig() {
+  const precio = document.getElementById('cfg-precio').value;
+  const prueba = document.getElementById('cfg-prueba').value;
+  const dias = document.getElementById('cfg-dias').value;
+  await sb.from('config').upsert([
+    {clave:'precio_plan', valor:precio},
+    {clave:'prueba_activa', valor:prueba},
+    {clave:'dias_prueba', valor:dias}
+  ]);
+  toast('✓ Configuración guardada — se aplica al instante');
+}
+
+async function cambiarPass() {
+  const newpass = document.getElementById('cfg-newpass').value;
+  if (!newpass || newpass.length < 6) { toast('Mínimo 6 caracteres'); return; }
+  await sb.from('config').upsert({clave:'admin_password', valor:newpass});
+  document.getElementById('cfg-newpass').value = '';
+  toast('✓ Contraseña actualizada');
+}
+
+function toggleSwitch(togId, inputId) {
+  const tog = document.getElementById(togId);
+  const inp = document.getElementById(inputId);
+  const isOn = tog.classList.toggle('on');
+  inp.value = isOn ? 'true' : 'false';
+}
+
+function showPage(page) {
+  ['clientes','config','rubros'].forEach(p => {
+    document.getElementById('page-'+p).style.display = p===page ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.target.closest('.nav-item').classList.add('active');
+  if (page === 'clientes') cargarClientes();
+  if (page === 'rubros') renderRubros();
+}
+
+document.getElementById('admin-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') adminLogin();
+});
+</script>
+</body>
+</html>

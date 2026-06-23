@@ -7,6 +7,8 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { rubro, rubroNombre, precio, email, userId } = req.body;
+  console.log('BODY:', JSON.stringify({ rubro, rubroNombre, precio, email, userId }));
+  console.log('TOKEN:', MP_TOKEN ? 'OK' : 'FALTA');
   const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
   const BASE_URL = process.env.BASE_URL || 'https://operix-liard.vercel.app';
 

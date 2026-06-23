@@ -17,7 +17,7 @@ export default async function handler(req, res) {
         description: `Suscripción mensual para ${rubroNombre}`,
         quantity: 1,
         currency_id: 'ARS',
-        unit_price: parseInt(precio)
+        unit_price: Number(precio) || 29990
       }],
       payer: { email: email || '' },
       back_urls: {

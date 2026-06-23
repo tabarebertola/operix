@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TurnosYa — Lavadero</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:#f5f5f5;color:#1a1a1a}
+:root{--border:#e0e0e0;--rad:8px;--rad-lg:12px;--blue:#1a6cff;--blue-light:#eef3ff}
+#app{display:flex;min-height:100vh}
+nav{width:220px;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:10;overflow-y:auto}
+main{margin-left:220px;flex:1;min-height:100vh}
+.nav-logo{padding:16px 18px;border-bottom:1px solid var(--border)}
+.nav-logo h1{font-size:16px;font-weight:700;letter-spacing:-.3px}
+.nav-logo span{font-size:11px;color:#999;display:block;margin-top:1px}
+.nav-section{padding:8px 0}
+.nav-label{font-size:10px;font-weight:600;color:#bbb;letter-spacing:.08em;padding:6px 18px 4px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;color:#666;font-size:13px;transition:background .1s}
+.nav-item:hover{background:#f5f5f5;color:#1a1a1a}
+.nav-item.active{background:#f0f0f0;color:#1a1a1a;font-weight:500}
+.nav-item svg{width:17px;height:17px;flex-shrink:0}
+.nav-badge{margin-left:auto;font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600}
+.nb-blue{background:#eef3ff;color:#1a6cff}
+.nb-red{background:#fef2f2;color:#b91c1c}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:5}
+.topbar h2{font-size:15px;font-weight:600}
+.topbar-actions{display:flex;gap:8px}
+.page{padding:24px;display:none;flex-direction:column;gap:16px}
+.page.active{display:flex}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{background:#fff;border:1px solid var(--border);border-radius:var(--rad-lg);padding:14px 16px}
+.stat-label{font-size:11px;color:#999;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.stat-num{font-size:24px;font-weight:600}
+.stat-num.blue{color:#1a6cff}
+.stat-num.success{color:#166534}
+.stat-num.warn{color:#b45309}
+.stat-num.danger{color:#b91c1c}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar input,.toolbar select{height:36px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad);background:#fff;color:#1a1a1a;font-size:13px;outline:none}
+.toolbar input{min-width:180px;flex:1}
+.btn{height:36px;padding:0 16px;border:1px solid var(--border);border-radius:var(--rad);background:#fff;color:#1a1a1a;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;font-weight:500;white-space:nowrap}
+.btn:hover{background:#f5f5f5}
+.btn.solid{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.btn.solid:hover{background:#333}
+.btn.blue{background:#1a6cff;color:#fff;border-color:#1a6cff}
+.btn.blue:hover{background:#0058e0}
+.btn.danger{border-color:#fca5a5;color:#b91c1c}
+.btn.danger:hover{background:#fef2f2}
+.btn.green{background:#166534;color:#fff;border-color:#166534}
+.btn.green:hover{background:#14532d}
+.btn svg{width:15px;height:15px}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden}
+.card-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-head h3{font-size:13px;font-weight:600}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th{padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:#fafafa;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#fafafa}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:100px;font-weight:500}
+.b-ok{background:#f0fdf4;color:#166534}
+.b-pend{background:#fffbeb;color:#92400e}
+.b-cancel{background:#fef2f2;color:#991b1b}
+.b-blue{background:#eef3ff;color:#1a6cff}
+.act{display:flex;gap:4px}
+.ic-btn{background:none;border:1px solid transparent;cursor:pointer;color:#999;padding:4px 6px;border-radius:6px;display:flex;align-items:center}
+.ic-btn:hover{color:#1a1a1a;background:#f0f0f0;border-color:var(--border)}
+.ic-btn svg{width:15px;height:15px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-start;justify-content:center;padding-top:50px}
+.overlay.open{display:flex}
+.modal{background:#fff;border:1px solid var(--border);border-radius:var(--rad-lg);width:min(560px,96vw);max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:2}
+.modal-head h2{font-size:15px;font-weight:600}
+.modal-body{padding:20px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--rad);background:#fff;color:#1a1a1a;font-size:13px;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#999}
+.field textarea{height:60px;resize:vertical;font-family:inherit}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:#fff}
+.empty{text-align:center;padding:2.5rem;color:#aaa;font-size:13px}
+.toast{position:fixed;bottom:20px;right:20px;background:#1a1a1a;color:#fff;padding:10px 16px;border-radius:var(--rad);font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;max-width:300px}
+.toast.show{opacity:1}
+.loading{text-align:center;padding:2.5rem;color:#aaa;font-size:13px}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f5f5}
+.login-box{background:#fff;border:1px solid var(--border);border-radius:var(--rad-lg);padding:32px;width:min(360px,92vw)}
+.login-box h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.login-box p{font-size:13px;color:#999;margin-bottom:24px}
+
+/* CALENDARIO */
+.cal-wrap{background:#fff;border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden}
+.cal-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.cal-header h3{font-size:13px;font-weight:600}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:8px}
+.cal-day-label{font-size:10px;font-weight:600;color:#bbb;text-align:center;padding:4px 0;text-transform:uppercase}
+.cal-day{padding:6px;text-align:center;font-size:13px;border-radius:6px;cursor:pointer;position:relative}
+.cal-day:hover{background:#f5f5f5}
+.cal-day.today{background:#eef3ff;color:#1a6cff;font-weight:600}
+.cal-day.selected{background:#1a1a1a;color:#fff;font-weight:600}
+.cal-day.has-turn::after{content:'';display:block;width:4px;height:4px;border-radius:50%;background:#1a6cff;margin:2px auto 0}
+.cal-day.selected.has-turn::after{background:#fff}
+.cal-day.past{color:#ccc;cursor:default}
+.cal-day.empty{cursor:default}
+
+/* SLOTS */
+.slots-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:12px 16px}
+.slot{padding:8px 4px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;text-align:center;cursor:pointer;background:#fff;font-weight:500}
+.slot:hover{border-color:#999;background:#f9f9f9}
+.slot.taken{background:#f5f5f5;color:#ccc;cursor:not-allowed;border-color:#f0f0f0;text-decoration:line-through}
+.slot.selected{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+
+/* SERVICIOS CARDS */
+.servicios-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.srv-card{border:1.5px solid var(--border);border-radius:16px;padding:18px 16px;cursor:pointer;transition:all .18s;background:#fff;position:relative;overflow:hidden}
+.srv-card:hover{border-color:#bbb;transform:translateY(-2px)}
+.srv-card.selected{border:2px solid #1a1a1a;background:#fafafa}
+.srv-card.selected::after{content:'✓';position:absolute;top:10px;right:12px;width:22px;height:22px;background:#1a1a1a;color:#fff;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:22px;text-align:center}
+.srv-icon{font-size:24px;margin-bottom:8px}
+.srv-name{font-size:13px;font-weight:600;margin-bottom:4px;color:#1a1a1a}
+.srv-price{font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:2px;letter-spacing:-.3px}
+.srv-time{font-size:11px;color:#999;display:flex;align-items:center;gap:3px}
+
+/* VISTA CLIENTE */
+.cliente-wrap{min-height:100vh;background:#f7f7f7}
+.cliente-hero{background:linear-gradient(135deg,#0f0f0f 0%,#2a2a2a 100%);color:#fff;padding:40px 24px 48px;text-align:center;position:relative;overflow:hidden}
+.cliente-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.04)}
+.cliente-hero::after{content:'';position:absolute;bottom:-60px;left:-20px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.03)}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:100px;padding:5px 14px;font-size:11px;color:rgba(255,255,255,.8);margin-bottom:16px;letter-spacing:.04em}
+.cliente-hero h1{font-size:28px;font-weight:700;margin-bottom:8px;letter-spacing:-.5px}
+.cliente-hero p{font-size:14px;color:rgba(255,255,255,.55);max-width:320px;margin:0 auto}
+.cliente-body{max-width:560px;margin:-24px auto 0;padding:0 16px 40px;position:relative;z-index:2}
+.section-card{background:#fff;border:1px solid #ebebeb;border-radius:20px;padding:20px;margin-bottom:14px}
+.section-title{font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:4px}
+.section-sub{font-size:12px;color:#aaa;margin-bottom:16px}
+.step-bar{display:flex;align-items:center;gap:0;margin-bottom:24px;background:#fff;border:1px solid #ebebeb;border-radius:100px;padding:6px 8px}
+.step-item{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:6px 8px;border-radius:100px;font-size:12px;color:#bbb;font-weight:500;transition:all .2s}
+.step-item.active{background:#1a1a1a;color:#fff}
+.step-item.done{color:#166534}
+.step-item span{font-size:11px;font-weight:600}
+.back-link{font-size:12px;color:#999;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-bottom:16px;padding:6px 0}
+.back-link:hover{color:#1a1a1a}
+.confirm-box{background:#f9f9f9;border:1px solid #ebebeb;border-radius:16px;padding:16px;margin-bottom:14px;overflow:hidden}
+.confirm-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+.confirm-row:last-child{border-bottom:none;font-weight:700;font-size:15px;padding-top:12px}
+.confirm-row .label{color:#999}
+.btn-primary{width:100%;height:48px;background:#1a1a1a;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;letter-spacing:-.2px;transition:all .15s}
+.btn-primary:hover{background:#333;transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(0)}
+.success-wrap{text-align:center;padding:48px 20px 32px}
+.success-circle{width:80px;height:80px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;border:2px solid #bbf7d0}
+.success-circle svg{width:40px;height:40px;color:#16a34a}
+.success-title{font-size:22px;font-weight:700;margin-bottom:8px;letter-spacing:-.4px}
+.success-sub{font-size:13px;color:#aaa;margin-bottom:24px;line-height:1.6}
+.veh-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:4px}
+.veh-card{border:1.5px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;text-align:center;transition:all .15s;background:#fff}
+.veh-card:hover{border-color:#bbb}
+.veh-card.selected{border:2px solid #1a1a1a;background:#fafafa}
+.veh-icon{font-size:22px;margin-bottom:4px}
+.veh-label{font-size:12px;font-weight:500;color:#1a1a1a}
+.field-modern label{display:block;font-size:11px;font-weight:600;color:#999;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
+.field-modern input{width:100%;padding:12px 14px;border:1.5px solid #ebebeb;border-radius:12px;background:#fff;color:#1a1a1a;font-size:14px;outline:none;transition:border-color .15s;margin-bottom:12px}
+.field-modern input:focus{border-color:#1a1a1a}
+
+/* MOBILE NAV */
+.mobile-nav{display:none;background:#fff;border-top:1px solid var(--border);position:fixed;bottom:0;left:0;right:0;z-index:10}
+.mobile-nav-items{display:flex}
+.mobile-nav-item{flex:1;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:#999;font-size:10px}
+.mobile-nav-item.active{color:#1a1a1a}
+.mobile-nav-item svg{width:20px;height:20px}
+
+@media(max-width:768px){
+  nav{display:none}
+  main{margin-left:0;padding-bottom:60px}
+  .mobile-nav{display:block}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .servicios-grid{grid-template-columns:1fr 1fr}
+  .slots-grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN DUEÑO -->
+<div id="login-screen" class="login-wrap" style="display:none">
+  <div class="login-box">
+    <h1>TurnosYa</h1>
+    <p>Panel del dueño — ingresá tu contraseña</p>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn solid" style="width:100%" onclick="doLogin()">Ingresar</button>
+    <div style="margin-top:16px;text-align:center">
+      <span style="font-size:12px;color:#999;cursor:pointer" onclick="showCliente()">← Volver a reservar turno</span>
+    </div>
+  </div>
+</div>
+
+<!-- VISTA CLIENTE -->
+<div id="cliente-screen">
+  <div class="cliente-hero">
+    <div class="hero-badge">🚗 Reservas online</div>
+    <h1 id="hero-nombre">Lavadero</h1>
+    <p>Elegí tu servicio, día y horario en menos de un minuto</p>
+  </div>
+  <div class="cliente-body">
+
+    <!-- PASO 1: Servicio y vehículo -->
+    <div id="c-step1">
+      <div class="step-bar">
+        <div class="step-item active"><span>1</span> Servicio</div>
+        <div class="step-item"><span>2</span> Horario</div>
+        <div class="step-item"><span>3</span> Confirmar</div>
+      </div>
+      <div class="section-card">
+        <div class="section-title">¿Qué servicio necesitás?</div>
+        <div class="section-sub">Elegí el paquete que mejor se adapte</div>
+        <div class="servicios-grid" id="srv-grid"></div>
+      </div>
+      <div class="section-card">
+        <div class="section-title">Tipo de vehículo</div>
+        <div class="section-sub">¿Qué vas a traer?</div>
+        <div class="veh-grid" id="veh-grid">
+          <div class="veh-card" onclick="selVehiculo('Auto chico',this)"><div class="veh-icon">🚗</div><div class="veh-label">Auto chico</div></div>
+          <div class="veh-card" onclick="selVehiculo('Auto mediano / grande',this)"><div class="veh-icon">🚙</div><div class="veh-label">Auto mediano</div></div>
+          <div class="veh-card" onclick="selVehiculo('Camioneta / SUV',this)"><div class="veh-icon">🛻</div><div class="veh-label">Camioneta / SUV</div></div>
+          <div class="veh-card" onclick="selVehiculo('Moto',this)"><div class="veh-icon">🏍️</div><div class="veh-label">Moto</div></div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="clienteStep2()">Elegir día y horario →</button>
+    </div>
+
+    <!-- PASO 2: Fecha y hora -->
+    <div id="c-step2" style="display:none">
+      <div class="step-bar">
+        <div class="step-item done"><span>✓</span> Servicio</div>
+        <div class="step-item active"><span>2</span> Horario</div>
+        <div class="step-item"><span>3</span> Confirmar</div>
+      </div>
+      <span class="back-link" onclick="goClienteStep(1)">← Volver</span>
+      <div class="section-card">
+        <div class="section-title">¿Qué día?</div>
+        <div class="section-sub">Seleccioná una fecha disponible</div>
+        <div class="cal-wrap" style="border:none;border-radius:0">
+          <div class="cal-header" style="padding:0 0 12px;border:none">
+            <button class="btn" onclick="cambiarMes(-1)">‹</button>
+            <h3 id="cal-titulo" style="font-size:14px"></h3>
+            <button class="btn" onclick="cambiarMes(1)">›</button>
+          </div>
+          <div class="cal-grid" id="cal-cliente"></div>
+        </div>
+      </div>
+      <div id="slots-section" style="display:none">
+        <div class="section-card">
+          <div class="section-title">Horarios disponibles</div>
+          <div class="section-sub">Los horarios tachados ya están ocupados</div>
+          <div class="slots-grid" id="slots-container" style="padding:0"></div>
+        </div>
+        <button class="btn-primary" onclick="clienteStep3()">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- PASO 3: Datos personales -->
+    <div id="c-step3" style="display:none">
+      <div class="step-bar">
+        <div class="step-item done"><span>✓</span> Servicio</div>
+        <div class="step-item done"><span>✓</span> Horario</div>
+        <div class="step-item active"><span>3</span> Confirmar</div>
+      </div>
+      <span class="back-link" onclick="goClienteStep(2)">← Volver</span>
+      <div class="section-card">
+        <div class="section-title">Resumen del turno</div>
+        <div class="confirm-box" id="resumen-turno" style="margin-bottom:0;background:#fff;border:none;padding:8px 0"></div>
+      </div>
+      <div class="section-card">
+        <div class="section-title">Tus datos</div>
+        <div class="section-sub">Para mandarte el recordatorio por WhatsApp</div>
+        <div class="field-modern"><label>Nombre y apellido</label><input type="text" id="c-nombre" placeholder="Juan García"></div>
+        <div class="field-modern"><label>WhatsApp</label><input type="tel" id="c-wsp" placeholder="3491234567"></div>
+        <div class="field-modern"><label>Patente (opcional)</label><input type="text" id="c-patente" placeholder="AA 123 BB" style="text-transform:uppercase;margin-bottom:0"></div>
+      </div>
+      <button class="btn-primary" onclick="confirmarTurno()">Confirmar turno</button>
+    </div>
+
+    <!-- PASO 4: Confirmación -->
+    <div id="c-step4" style="display:none">
+      <div class="success-wrap">
+        <div class="success-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="success-title">¡Turno confirmado!</div>
+        <div class="success-sub">Te vamos a contactar por WhatsApp<br>el día anterior para recordarte el turno</div>
+        <div class="confirm-box" id="confirm-detalle"></div>
+        <button class="btn-primary" style="margin-top:16px" onclick="nuevoTurnoCliente()">Reservar otro turno</button>
+      </div>
+    </div>
+
+  </div>
+  <div style="text-align:center;padding:0 0 32px;font-size:11px;color:#ccc">
+    <span style="cursor:pointer" onclick="showLogin()">Acceso panel dueño</span>
+  </div>
+</div>
+
+<!-- PANEL DUEÑO -->
+<div id="dueno-screen" style="display:none">
+<div id="app">
+  <nav>
+    <div class="nav-logo">
+      <h1>TurnosYa</h1>
+      <span id="nav-negocio">Lavadero</span>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Principal</div>
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('turnos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Turnos
+        <span class="nav-badge nb-blue" id="badge-hoy">0</span>
+      </div>
+      <div class="nav-item" onclick="showPage('servicios')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Servicios
+      </div>
+      <div class="nav-item" onclick="showPage('config')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Configuración
+      </div>
+    </div>
+    <div style="margin-top:auto;padding:16px 18px;border-top:1px solid var(--border)">
+      <button class="btn" style="width:100%;justify-content:center" onclick="cerrarSesion()">Cerrar sesión</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div class="topbar"><h2>Dashboard</h2><div class="topbar-actions"><button class="btn blue" onclick="showPage('turnos')">Ver todos los turnos</button></div></div>
+      <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+        <div class="stats">
+          <div class="stat"><div class="stat-label">Turnos hoy</div><div class="stat-num blue" id="d-hoy">—</div></div>
+          <div class="stat"><div class="stat-label">Esta semana</div><div class="stat-num" id="d-semana">—</div></div>
+          <div class="stat"><div class="stat-label">Este mes</div><div class="stat-num" id="d-mes">—</div></div>
+          <div class="stat"><div class="stat-label">Ingresos hoy</div><div class="stat-num success" id="d-ingresos">—</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-head"><h3>Turnos de hoy</h3><span id="fecha-hoy" style="font-size:12px;color:#999"></span></div>
+            <div id="lista-hoy"><div class="loading">Cargando...</div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Calendario</h3>
+              <div style="display:flex;gap:4px">
+                <button class="btn" onclick="cambiarMesDueno(-1)">‹</button>
+                <button class="btn" onclick="cambiarMesDueno(1)">›</button>
+              </div>
+            </div>
+            <div style="padding:8px">
+              <div style="font-size:12px;font-weight:600;color:#999;text-align:center;margin-bottom:4px" id="cal-dueno-titulo"></div>
+              <div class="cal-grid" id="cal-dueno"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TURNOS -->
+    <div id="page-turnos" class="page">
+      <div class="topbar"><h2>Turnos</h2>
+        <div class="topbar-actions">
+          <button class="btn solid" onclick="openModalNuevoTurno()">+ Nuevo turno</button>
+        </div>
+      </div>
+      <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+        <div class="toolbar">
+          <input type="date" id="filtro-fecha" onchange="loadTurnos()">
+          <select id="filtro-estado" onchange="loadTurnos()">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="confirmado">Confirmado</option>
+            <option value="completado">Completado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <button class="btn" onclick="document.getElementById('filtro-fecha').value='';document.getElementById('filtro-estado').value='';loadTurnos()">Limpiar filtros</button>
+        </div>
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:80px">Hora</th>
+                <th style="width:80px">Fecha</th>
+                <th>Cliente</th>
+                <th>WhatsApp</th>
+                <th>Servicio</th>
+                <th>Vehículo</th>
+                <th style="width:80px">Precio</th>
+                <th style="width:100px">Estado</th>
+                <th style="width:100px">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-turnos"><tr><td colspan="9" class="loading">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SERVICIOS -->
+    <div id="page-servicios" class="page">
+      <div class="topbar"><h2>Servicios y precios</h2>
+        <div class="topbar-actions">
+          <button class="btn solid" onclick="openModalServicio()">+ Nuevo servicio</button>
+        </div>
+      </div>
+      <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th style="width:120px">Precio</th>
+                <th style="width:120px">Duración</th>
+                <th style="width:80px">Estado</th>
+                <th style="width:100px">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-servicios"><tr><td colspan="5" class="loading">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="page-config" class="page">
+      <div class="topbar"><h2>Configuración</h2></div>
+      <div style="padding:24px;max-width:500px;display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="padding:20px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:16px">Datos del negocio</div>
+          <div class="field"><label>Nombre del lavadero</label><input type="text" id="cfg-nombre"></div>
+          <div class="field"><label>WhatsApp del negocio</label><input type="tel" id="cfg-wsp" placeholder="3491234567"></div>
+          <div class="g2">
+            <div class="field"><label>Horario inicio</label><input type="time" id="cfg-inicio"></div>
+            <div class="field"><label>Horario fin</label><input type="time" id="cfg-fin"></div>
+          </div>
+          <div class="field"><label>Duración por defecto (min)</label><input type="number" id="cfg-duracion" placeholder="30"></div>
+          <div class="field"><label>Nueva contraseña (dejar vacío para no cambiar)</label><input type="password" id="cfg-pass" placeholder="••••"></div>
+          <button class="btn solid" onclick="saveConfig()">Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- MODAL NUEVO TURNO (dueño) -->
+<div class="overlay" id="overlay-turno">
+  <div class="modal">
+    <div class="modal-head"><h2>Nuevo turno</h2><button class="ic-btn" onclick="closeModalTurno()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="g2">
+        <div class="field"><label>Fecha *</label><input type="date" id="t-fecha"></div>
+        <div class="field"><label>Hora *</label><input type="time" id="t-hora"></div>
+      </div>
+      <div class="field"><label>Nombre cliente *</label><input type="text" id="t-nombre" placeholder="Juan García"></div>
+      <div class="field"><label>WhatsApp *</label><input type="tel" id="t-wsp" placeholder="3491234567"></div>
+      <div class="g2">
+        <div class="field"><label>Servicio *</label><select id="t-servicio"></select></div>
+        <div class="field"><label>Vehículo *</label>
+          <select id="t-vehiculo">
+            <option value="">Seleccioná...</option>
+            <option>Auto chico</option>
+            <option>Auto mediano / grande</option>
+            <option>Camioneta / SUV</option>
+            <option>Moto</option>
+            <option>Utilitario</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="field"><label>Patente</label><input type="text" id="t-patente" placeholder="AA 123 BB"></div>
+        <div class="field"><label>Precio ($)</label><input type="number" id="t-precio" placeholder="0"></div>
+      </div>
+      <div class="field"><label>Estado</label>
+        <select id="t-estado">
+          <option value="pendiente">Pendiente</option>
+          <option value="confirmado">Confirmado</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModalTurno()">Cancelar</button>
+      <button class="btn solid" onclick="saveTurno()">Guardar turno</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SERVICIO -->
+<div class="overlay" id="overlay-servicio">
+  <div class="modal">
+    <div class="modal-head"><h2 id="srv-modal-titulo">Nuevo servicio</h2><button class="ic-btn" onclick="closeModalServicio()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="field"><label>Nombre del servicio *</label><input type="text" id="s-nombre" placeholder="Lavado completo"></div>
+      <div class="g2">
+        <div class="field"><label>Precio ($) *</label><input type="number" id="s-precio" placeholder="0"></div>
+        <div class="field"><label>Duración (min) *</label><input type="number" id="s-duracion" placeholder="30"></div>
+      </div>
+      <div class="field"><label>Estado</label>
+        <select id="s-activo">
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModalServicio()">Cancelar</button>
+      <button class="btn solid" onclick="saveServicio()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL='https://hlmsddzvwcxbjmjjqtgy.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsbXNkZHp2d2N4YmptampxdGd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzIxODAsImV4cCI6MjA5Nzc0ODE4MH0.qbRAQP41ni085xrqiGui_esThfANcmQW8kqczoN-zA8';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let servicios=[],turnos=[],config={},calMes=new Date(),calMesDueno=new Date();
+let selServicio=null,selFecha=null,selHora=null,selVeh=null,editTurnoId=null,editSrvId=null;
+let autenticado=false;
+
+function selVehiculo(nombre,el){
+  selVeh=nombre;
+  document.querySelectorAll('.veh-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function hoy(){return new Date().toISOString().split('T')[0]}
+function fmtFecha(s){if(!s)return'';const[y,m,d]=s.split('-');const ms=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];return`${parseInt(d)} ${ms[parseInt(m)-1]} ${y}`}
+function fmtPrecio(n){return'$'+parseInt(n).toLocaleString('es-AR')}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800)}
+
+async function loadAll(){
+  const[{data:srv},{data:cfg},{data:trn}]=await Promise.all([
+    sb.from('servicios').select('*').order('id'),
+    sb.from('config').select('*'),
+    sb.from('turnos').select('*').order('fecha').order('hora')
+  ]);
+  servicios=srv||[];
+  turnos=trn||[];
+  config={};
+  (cfg||[]).forEach(c=>config[c.clave]=c.valor);
+  document.getElementById('hero-nombre').textContent='🚗 '+(config.nombre_negocio||'Lavadero');
+  if(document.getElementById('nav-negocio')) document.getElementById('nav-negocio').textContent=config.nombre_negocio||'Lavadero';
+  renderSrvGrid();
+  renderDashboard();
+  renderTurnos();
+  renderServicios();
+  loadConfig();
+}
+
+// ===================== CLIENTE =====================
+function showCliente(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('dueno-screen').style.display='none';
+  document.getElementById('cliente-screen').style.display='block';
+}
+function showLogin(){
+  document.getElementById('cliente-screen').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+}
+function cerrarSesion(){autenticado=false;showCliente();}
+
+async function doLogin(){
+  const pass=document.getElementById('login-pass').value;
+  const passReal=config.password_dueno||'1234';
+  if(pass===passReal){
+    autenticado=true;
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('cliente-screen').style.display='none';
+    document.getElementById('dueno-screen').style.display='block';
+    showPage('dashboard');
+  } else {
+    toast('⚠ Contraseña incorrecta');
+  }
+}
+
+const srvIcons=['🧼','✨','💎','🪣'];
+function renderSrvGrid(){
+  const activos=servicios.filter(s=>s.activo);
+  document.getElementById('srv-grid').innerHTML=activos.map((s,i)=>`
+    <div class="srv-card${selServicio===s.id?' selected':''}" onclick="elegirServicio(${s.id})">
+      <div class="srv-icon">${srvIcons[i%srvIcons.length]}</div>
+      <div class="srv-name">${s.nombre}</div>
+      <div class="srv-price">${fmtPrecio(s.precio)}</div>
+      <div class="srv-time">⏱ ${s.duracion_min} min</div>
+    </div>`).join('');
+}
+
+function elegirServicio(id){selServicio=id;renderSrvGrid();}
+
+function clienteStep2(){
+  if(!selServicio){toast('⚠ Elegí un servicio');return;}
+  if(!selVeh){toast('⚠ Elegí el tipo de vehículo');return;}
+  goClienteStep(2);
+  renderCalCliente();
+}
+
+function goClienteStep(n){
+  [1,2,3,4].forEach(i=>document.getElementById('c-step'+i).style.display=i===n?'block':'none');
+}
+
+function renderCalCliente(){
+  const hoyDate=new Date();
+  const y=calMes.getFullYear(),m=calMes.getMonth();
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  document.getElementById('cal-titulo').textContent=meses[m]+' '+y;
+  const dias=['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+  const primerDia=new Date(y,m,1).getDay();
+  const diasMes=new Date(y,m+1,0).getDate();
+  let html=dias.map(d=>`<div class="cal-day-label">${d}</div>`).join('');
+  for(let i=0;i<primerDia;i++) html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=diasMes;d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const esHoy=ds===hoy();
+    const esPasado=new Date(y,m,d)<new Date(hoyDate.getFullYear(),hoyDate.getMonth(),hoyDate.getDate());
+    const hasTurn=turnos.filter(t=>t.fecha===ds).length>0;
+    const esSel=selFecha===ds;
+    html+=`<div class="cal-day${esPasado?' past':''}${esHoy&&!esSel?' today':''}${esSel?' selected':''}${hasTurn?' has-turn':''}" onclick="${esPasado?'':` selDiaCliente('${ds}')`}">${d}</div>`;
+  }
+  document.getElementById('cal-cliente').innerHTML=html;
+}
+
+function cambiarMes(dir){calMes=new Date(calMes.getFullYear(),calMes.getMonth()+dir,1);renderCalCliente();}
+
+function selDiaCliente(fecha){
+  selFecha=fecha;selHora=null;
+  renderCalCliente();
+  renderSlots();
+  document.getElementById('slots-section').style.display='block';
+}
+
+function renderSlots(){
+  const inicio=config.horario_inicio||'08:00';
+  const fin=config.horario_fin||'18:00';
+  const dur=parseInt(config.duracion_defecto||30);
+  const slots=[];
+  let cur=new Date('2000-01-01T'+inicio);
+  const finDate=new Date('2000-01-01T'+fin);
+  while(cur<finDate){
+    slots.push(cur.toTimeString().slice(0,5));
+    cur=new Date(cur.getTime()+dur*60000);
+  }
+  const ocupados=turnos.filter(t=>t.fecha===selFecha&&t.estado!=='cancelado').map(t=>t.hora);
+  document.getElementById('slots-container').innerHTML=slots.map(h=>{
+    const taken=ocupados.includes(h);
+    return`<div class="slot${taken?' taken':''}${selHora===h&&!taken?' selected':''}" onclick="${taken?'':` selHoraCliente('${h}')`}">${h}</div>`;
+  }).join('');
+}
+
+function selHoraCliente(h){selHora=h;renderSlots();}
+
+function clienteStep3(){
+  if(!selFecha){toast('⚠ Elegí un día');return;}
+  if(!selHora){toast('⚠ Elegí un horario');return;}
+  const srv=servicios.find(s=>s.id===selServicio);
+  document.getElementById('resumen-turno').innerHTML=`
+    <div class="confirm-row"><span class="label">Servicio</span><span>${srv.nombre}</span></div>
+    <div class="confirm-row"><span class="label">Vehículo</span><span>${selVeh}</span></div>
+    <div class="confirm-row"><span class="label">Día</span><span>${fmtFecha(selFecha)}</span></div>
+    <div class="confirm-row"><span class="label">Hora</span><span>${selHora}</span></div>
+    <div class="confirm-row"><span class="label">Total</span><span>${fmtPrecio(srv.precio)}</span></div>`;
+  goClienteStep(3);
+}
+
+async function confirmarTurno(){
+  const nombre=document.getElementById('c-nombre').value.trim();
+  const wsp=document.getElementById('c-wsp').value.trim();
+  if(!nombre){toast('⚠ Ingresá tu nombre');return;}
+  if(!wsp){toast('⚠ Ingresá tu WhatsApp');return;}
+  const srv=servicios.find(s=>s.id===selServicio);
+  const {error}=await sb.from('turnos').insert([{
+    fecha:selFecha,hora:selHora,nombre,whatsapp:wsp,
+    vehiculo:selVeh,
+    patente:document.getElementById('c-patente').value.trim().toUpperCase(),
+    servicio:srv.nombre,precio:srv.precio,estado:'pendiente'
+  }]);
+  if(error){toast('Error: '+error.message);return;}
+  document.getElementById('confirm-detalle').innerHTML=`
+    <div class="confirm-row"><span class="label">Servicio</span><span>${srv.nombre}</span></div>
+    <div class="confirm-row"><span class="label">Vehículo</span><span>${selVeh}</span></div>
+    <div class="confirm-row"><span class="label">Día</span><span>${fmtFecha(selFecha)}</span></div>
+    <div class="confirm-row"><span class="label">Hora</span><span>${selHora}</span></div>
+    <div class="confirm-row"><span class="label">Total</span><span>${fmtPrecio(srv.precio)}</span></div>`;
+  await loadAll();
+  goClienteStep(4);
+}
+
+function nuevoTurnoCliente(){
+  selServicio=null;selFecha=null;selHora=null;selVeh=null;
+  document.getElementById('c-nombre').value='';
+  document.getElementById('c-wsp').value='';
+  document.getElementById('c-patente').value='';
+  document.getElementById('slots-section').style.display='none';
+  document.querySelectorAll('.veh-card').forEach(c=>c.classList.remove('selected'));
+  goClienteStep(1);
+}
+
+// ===================== DUEÑO =====================
+function showPage(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  const idx={dashboard:0,turnos:1,servicios:2,config:3}[p];
+  document.querySelectorAll('.nav-item')[idx]?.classList.add('active');
+  if(p==='turnos') loadTurnos();
+}
+
+function renderDashboard(){
+  const h=hoy();
+  const semana=new Date();semana.setDate(semana.getDate()-7);
+  const mes=new Date();mes.setDate(1);
+  const hoyTurnos=turnos.filter(t=>t.fecha===h);
+  const semTurnos=turnos.filter(t=>t.fecha>=semana.toISOString().split('T')[0]);
+  const mesTurnos=turnos.filter(t=>t.fecha>=mes.toISOString().split('T')[0]);
+  const ingHoy=hoyTurnos.filter(t=>t.estado==='completado').reduce((a,t)=>a+parseFloat(t.precio||0),0);
+  document.getElementById('d-hoy').textContent=hoyTurnos.length;
+  document.getElementById('d-semana').textContent=semTurnos.length;
+  document.getElementById('d-mes').textContent=mesTurnos.length;
+  document.getElementById('d-ingresos').textContent=fmtPrecio(ingHoy);
+  document.getElementById('badge-hoy').textContent=hoyTurnos.length;
+  document.getElementById('fecha-hoy').textContent=fmtFecha(h);
+  document.getElementById('lista-hoy').innerHTML=hoyTurnos.length?hoyTurnos.sort((a,b)=>a.hora.localeCompare(b.hora)).map(t=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #f0f0f0">
+      <div>
+        <div style="font-size:13px;font-weight:600">${t.hora} — ${t.nombre}</div>
+        <div style="font-size:12px;color:#999">${t.servicio} · ${t.vehiculo}</div>
+      </div>
+      <span class="badge ${t.estado==='completado'?'b-ok':t.estado==='cancelado'?'b-cancel':'b-pend'}">${t.estado}</span>
+    </div>`).join(''):`<div class="empty">Sin turnos para hoy</div>`;
+  renderCalDueno();
+}
+
+function renderCalDueno(){
+  const y=calMesDueno.getFullYear(),m=calMesDueno.getMonth();
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  document.getElementById('cal-dueno-titulo').textContent=meses[m]+' '+y;
+  const dias=['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+  const primerDia=new Date(y,m,1).getDay();
+  const diasMes=new Date(y,m+1,0).getDate();
+  let html=dias.map(d=>`<div class="cal-day-label">${d}</div>`).join('');
+  for(let i=0;i<primerDia;i++) html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=diasMes;d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const esHoy=ds===hoy();
+    const hasTurn=turnos.filter(t=>t.fecha===ds&&t.estado!=='cancelado').length>0;
+    html+=`<div class="cal-day${esHoy?' today':''}${hasTurn?' has-turn':''}" title="${hasTurn?'Hay turnos':''}">${d}</div>`;
+  }
+  document.getElementById('cal-dueno').innerHTML=html;
+}
+
+function cambiarMesDueno(dir){calMesDueno=new Date(calMesDueno.getFullYear(),calMesDueno.getMonth()+dir,1);renderCalDueno();}
+
+function loadTurnos(){
+  const fecha=document.getElementById('filtro-fecha')?.value;
+  const estado=document.getElementById('filtro-estado')?.value;
+  let filtered=turnos;
+  if(fecha) filtered=filtered.filter(t=>t.fecha===fecha);
+  if(estado) filtered=filtered.filter(t=>t.estado===estado);
+  filtered=filtered.sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.hora.localeCompare(b.hora));
+  document.getElementById('tabla-turnos').innerHTML=filtered.length?filtered.map(t=>`
+    <tr>
+      <td>${t.hora}</td>
+      <td>${fmtFecha(t.fecha)}</td>
+      <td title="${t.nombre}">${t.nombre}</td>
+      <td>${t.whatsapp}</td>
+      <td title="${t.servicio}">${t.servicio}</td>
+      <td title="${t.vehiculo}${t.patente?' — '+t.patente:''}">${t.vehiculo}${t.patente?' — '+t.patente:''}</td>
+      <td>${fmtPrecio(t.precio)}</td>
+      <td>
+        <select style="border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:11px;background:#fff" onchange="cambiarEstado(${t.id},this.value)">
+          ${['pendiente','confirmado','completado','cancelado'].map(e=>`<option value="${e}"${t.estado===e?' selected':''}>${e}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <div class="act">
+          <button class="ic-btn" onclick="editTurno(${t.id})" title="Editar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="ic-btn danger" onclick="deleteTurno(${t.id})" title="Eliminar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>`).join(''):`<tr><td colspan="9" class="empty">No hay turnos con esos filtros</td></tr>`;
+}
+
+async function cambiarEstado(id,estado){
+  const {error}=await sb.from('turnos').update({estado}).eq('id',id);
+  if(error){toast('Error: '+error.message);return;}
+  const t=turnos.find(x=>x.id===id);
+  if(t) t.estado=estado;
+  toast('Estado actualizado');
+  renderDashboard();
+}
+
+function openModalNuevoTurno(id=null){
+  editTurnoId=id;
+  document.getElementById('t-fecha').value=hoy();
+  document.getElementById('t-hora').value='09:00';
+  document.getElementById('t-nombre').value='';
+  document.getElementById('t-wsp').value='';
+  document.getElementById('t-vehiculo').value='';
+  document.getElementById('t-patente').value='';
+  document.getElementById('t-precio').value='';
+  document.getElementById('t-estado').value='pendiente';
+  document.getElementById('t-servicio').innerHTML=servicios.map(s=>`<option value="${s.id}" data-precio="${s.precio}">${s.nombre}</option>`).join('');
+  document.getElementById('t-servicio').onchange=function(){
+    const opt=this.options[this.selectedIndex];
+    document.getElementById('t-precio').value=opt.dataset.precio||0;
+  };
+  if(servicios.length) document.getElementById('t-precio').value=servicios[0].precio;
+  if(id){
+    const t=turnos.find(x=>x.id===id);
+    if(t){
+      document.getElementById('t-fecha').value=t.fecha;
+      document.getElementById('t-hora').value=t.hora;
+      document.getElementById('t-nombre').value=t.nombre;
+      document.getElementById('t-wsp').value=t.whatsapp;
+      document.getElementById('t-vehiculo').value=t.vehiculo;
+      document.getElementById('t-patente').value=t.patente||'';
+      document.getElementById('t-precio').value=t.precio;
+      document.getElementById('t-estado').value=t.estado;
+    }
+  }
+  document.getElementById('overlay-turno').classList.add('open');
+}
+function closeModalTurno(){document.getElementById('overlay-turno').classList.remove('open');}
+function editTurno(id){openModalNuevoTurno(id);}
+
+async function saveTurno(){
+  const fecha=document.getElementById('t-fecha').value;
+  const hora=document.getElementById('t-hora').value;
+  const nombre=document.getElementById('t-nombre').value.trim();
+  const wsp=document.getElementById('t-wsp').value.trim();
+  const vehiculo=document.getElementById('t-vehiculo').value;
+  if(!fecha||!hora||!nombre||!wsp||!vehiculo){toast('⚠ Completá los campos obligatorios');return;}
+  const srvOpt=document.getElementById('t-servicio');
+  const data={
+    fecha,hora,nombre,whatsapp:wsp,vehiculo,
+    patente:document.getElementById('t-patente').value.trim().toUpperCase()||null,
+    servicio:srvOpt.options[srvOpt.selectedIndex].text,
+    precio:parseFloat(document.getElementById('t-precio').value)||0,
+    estado:document.getElementById('t-estado').value
+  };
+  let error;
+  if(editTurnoId){({error}=await sb.from('turnos').update(data).eq('id',editTurnoId));}
+  else{({error}=await sb.from('turnos').insert([data]));}
+  if(error){toast('Error: '+error.message);return;}
+  toast(editTurnoId?'Turno actualizado':'Turno agregado');
+  closeModalTurno();await loadAll();
+}
+
+async function deleteTurno(id){
+  if(!confirm('¿Eliminar este turno?'))return;
+  await sb.from('turnos').delete().eq('id',id);
+  await loadAll();toast('Turno eliminado');
+}
+
+function renderServicios(){
+  document.getElementById('tabla-servicios').innerHTML=servicios.length?servicios.map(s=>`
+    <tr>
+      <td>${s.nombre}</td>
+      <td>${fmtPrecio(s.precio)}</td>
+      <td>${s.duracion_min} min</td>
+      <td><span class="badge ${s.activo?'b-ok':'b-cancel'}">${s.activo?'Activo':'Inactivo'}</span></td>
+      <td>
+        <div class="act">
+          <button class="ic-btn" onclick="editServicio(${s.id})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="ic-btn danger" onclick="deleteServicio(${s.id})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>`).join(''):`<tr><td colspan="5" class="empty">No hay servicios</td></tr>`;
+}
+
+function openModalServicio(id=null){
+  editSrvId=id;
+  document.getElementById('srv-modal-titulo').textContent=id?'Editar servicio':'Nuevo servicio';
+  if(id){const s=servicios.find(x=>x.id===id);if(s){document.getElementById('s-nombre').value=s.nombre;document.getElementById('s-precio').value=s.precio;document.getElementById('s-duracion').value=s.duracion_min;document.getElementById('s-activo').value=String(s.activo);}}
+  else{['s-nombre'].forEach(i=>document.getElementById(i).value='');document.getElementById('s-precio').value=0;document.getElementById('s-duracion').value=30;document.getElementById('s-activo').value='true';}
+  document.getElementById('overlay-servicio').classList.add('open');
+}
+function closeModalServicio(){document.getElementById('overlay-servicio').classList.remove('open');}
+function editServicio(id){openModalServicio(id);}
+
+async function saveServicio(){
+  const nombre=document.getElementById('s-nombre').value.trim();
+  if(!nombre){toast('⚠ Ingresá el nombre');return;}
+  const data={nombre,precio:parseFloat(document.getElementById('s-precio').value)||0,duracion_min:parseInt(document.getElementById('s-duracion').value)||30,activo:document.getElementById('s-activo').value==='true'};
+  let error;
+  if(editSrvId){({error}=await sb.from('servicios').update(data).eq('id',editSrvId));}
+  else{({error}=await sb.from('servicios').insert([data]));}
+  if(error){toast('Error: '+error.message);return;}
+  toast('Servicio guardado');closeModalServicio();await loadAll();
+}
+
+async function deleteServicio(id){
+  if(!confirm('¿Eliminar este servicio?'))return;
+  await sb.from('servicios').delete().eq('id',id);
+  await loadAll();toast('Eliminado');
+}
+
+function loadConfig(){
+  document.getElementById('cfg-nombre').value=config.nombre_negocio||'';
+  document.getElementById('cfg-wsp').value=config.whatsapp_negocio||'';
+  document.getElementById('cfg-inicio').value=config.horario_inicio||'08:00';
+  document.getElementById('cfg-fin').value=config.horario_fin||'18:00';
+  document.getElementById('cfg-duracion').value=config.duracion_defecto||'30';
+}
+
+async function saveConfig(){
+  const cfg=[
+    {clave:'nombre_negocio',valor:document.getElementById('cfg-nombre').value},
+    {clave:'whatsapp_negocio',valor:document.getElementById('cfg-wsp').value},
+    {clave:'horario_inicio',valor:document.getElementById('cfg-inicio').value},
+    {clave:'horario_fin',valor:document.getElementById('cfg-fin').value},
+    {clave:'duracion_defecto',valor:document.getElementById('cfg-duracion').value},
+  ];
+  const newPass=document.getElementById('cfg-pass').value;
+  if(newPass) cfg.push({clave:'password_dueno',valor:newPass});
+  for(const c of cfg){await sb.from('config').upsert({clave:c.clave,valor:c.valor},{onConflict:'clave'});}
+  toast('✓ Configuración guardada');
+  await loadAll();
+}
+
+loadAll();
+</script>
+</body>
+</html>

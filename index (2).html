@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Operix</title>
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#185FA5" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Operix" />
+<link rel="apple-touch-icon" href="/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f5; --bg3: #eeeeee;
+    --text: #111111; --text2: #555555; --text3: #888888;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.2);
+    --blue: #185FA5; --blue-dark: #0C447C; --blue-light: #E6F1FB; --blue-mid: #378ADD;
+    --green: #1D9E75; --green-light: #EAF3DE;
+    --radius: 8px; --radius-lg: 12px; --radius-xl: 16px;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+  /* TRANSICIONES */
+  .screen { display: none; min-height: 100vh; opacity: 0; transition: opacity 0.25s ease; }
+  .screen.active { display: block; }
+  .screen.visible { opacity: 1; }
+
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes dropIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideUp { from { opacity:0; transform: translateX(-50%) translateY(20px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+
+  /* INSTALAR PWA BANNER */
+  #install-banner {
+    display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--blue); color: #fff; padding: 14px 20px;
+    border-radius: var(--radius-lg); box-shadow: 0 8px 32px rgba(24,95,165,0.4);
+    z-index: 9999; align-items: center; gap: 12px; max-width: 360px; width: 92%;
+    animation: slideUp 0.3s ease;
+  }
+  #install-banner.show { display: flex; }
+  #install-banner i { font-size: 22px; flex-shrink: 0; }
+  #install-banner .txt { flex: 1; }
+  #install-banner .txt strong { display: block; font-size: 14px; font-weight: 600; }
+  #install-banner .txt span { font-size: 12px; opacity: 0.85; }
+  .install-btns { display: flex; gap: 8px; flex-shrink: 0; }
+  .btn-install { padding: 7px 14px; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; border: none; font-family: 'Inter', sans-serif; }
+  .btn-install-yes { background: #fff; color: var(--blue); }
+  .btn-install-no { background: transparent; color: rgba(255,255,255,0.7); font-size: 12px; }
+
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
+  .nav-logo { display: flex; align-items: center; gap: 10px; cursor: pointer; text-decoration: none; }
+  .nav-logo svg { width: 30px; height: 30px; }
+  .nav-logo span { font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
+  .nav-links { display: flex; gap: 10px; align-items: center; }
+
+  .btn { padding: 9px 20px; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; border: 1px solid var(--border2); background: transparent; color: var(--text); font-family: 'Inter', sans-serif; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { background: var(--bg2); }
+  .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn-primary:hover { background: var(--blue-dark); border-color: var(--blue-dark); }
+  .btn-sm { padding: 7px 16px; font-size: 13px; }
+  .btn-lg { padding: 13px 32px; font-size: 15px; }
+  .btn-back { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text2); cursor: pointer; padding: 8px 16px; border-radius: var(--radius); border: 1px solid var(--border2); background: transparent; font-family: 'Inter', sans-serif; margin-bottom: 24px; transition: all 0.15s ease; font-weight: 500; }
+  .btn-back:hover { background: var(--bg2); color: var(--text); }
+
+  .alert { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 14px; display: none; }
+  .alert.show { display: block; }
+  .alert-error { background: #fff0f0; color: #c0392b; border: 1px solid #fcc; }
+
+  /* LANDING */
+  #s1 { background: #0a0a0a; }
+  #s1 .nav { background: #0a0a0a; border-bottom: 1px solid #222; }
+  #s1 .nav-logo span { color: #fff; }
+  #s1 .nav .btn { color: #ccc; border-color: #333; }
+  #s1 .nav .btn:hover { background: #1a1a1a; color: #fff; }
+  #s1 .nav .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  #s1 .nav .btn-primary:hover { background: var(--blue-dark); }
+  .hero { padding: 88px 32px 64px; text-align: center; max-width: 680px; margin: 0 auto; }
+  .hero h1 { font-size: 42px; font-weight: 600; color: #fff; line-height: 1.15; margin-bottom: 18px; letter-spacing: -0.8px; }
+  .hero h1 em { color: var(--blue-mid); font-style: normal; }
+  .hero p { font-size: 16px; color: #777; line-height: 1.75; margin-bottom: 40px; max-width: 480px; margin-left: auto; margin-right: auto; }
+  .hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .hero .btn-lg { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .hero .btn-lg:hover { background: var(--blue-dark); }
+  .btn-outline-dark { padding: 13px 32px; font-size: 15px; font-weight: 500; border-radius: var(--radius); cursor: pointer; border: 1px solid #333; background: transparent; color: #ccc; font-family: 'Inter', sans-serif; transition: all 0.15s ease; }
+  .btn-outline-dark:hover { background: #1a1a1a; color: #fff; }
+  .rubros-section { padding: 56px 32px 48px; border-top: 1px solid #1a1a1a; }
+  .section-label { font-size: 11px; color: #444; text-align: center; margin-bottom: 24px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; }
+  .rubros-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; max-width: 620px; margin: 0 auto; }
+  .rubro-card-dark { background: #141414; border: 1px solid #222; border-radius: var(--radius-lg); padding: 26px 16px; cursor: pointer; text-align: center; transition: all 0.2s ease; }
+  .rubro-card-dark:hover { border-color: var(--blue); background: #181818; transform: translateY(-2px); }
+  .rubro-card-dark .rn { font-size: 14px; font-weight: 500; color: #eee; }
+  .rubro-card-dark.soon { opacity: 0.3; pointer-events: none; }
+  .trust-strip { padding: 28px 32px; border-top: 1px solid #1a1a1a; display: flex; align-items: center; justify-content: center; gap: 40px; flex-wrap: wrap; }
+  .trust-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #555; font-weight: 500; }
+  .trust-item i { font-size: 16px; color: var(--blue-mid); }
+
+  /* AUTH */
+  #s2 { background: var(--bg2); }
+  .auth-wrap { min-height: calc(100vh - 65px); display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+  .auth-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 36px 32px; width: 100%; max-width: 380px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); }
+  .auth-logo { display: flex; align-items: center; gap: 9px; margin-bottom: 28px; }
+  .auth-logo svg { width: 24px; height: 24px; }
+  .auth-logo span { font-size: 17px; font-weight: 600; color: var(--text); }
+  .auth-card h2 { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 24px; letter-spacing: -0.3px; }
+  .field { margin-bottom: 16px; }
+  .field label { font-size: 13px; color: var(--text2); display: block; margin-bottom: 6px; font-weight: 500; }
+  .field-3d { background: var(--bg2); border: 1px solid var(--border2); border-bottom: 2.5px solid var(--border2); border-radius: var(--radius); overflow: hidden; transition: all 0.15s ease; }
+  .field-3d:focus-within { border-color: var(--blue); border-bottom-color: var(--blue); background: var(--bg); box-shadow: 0 0 0 3px rgba(24,95,165,0.1); }
+  .field-3d input { width: 100%; padding: 11px 14px; font-size: 14px; border: none; background: transparent; color: var(--text); font-family: 'Inter', sans-serif; outline: none; }
+  .field-3d input::placeholder { color: var(--text3); }
+  .password-wrap { display: flex; align-items: center; }
+  .password-wrap input { flex: 1; }
+  .password-toggle { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 18px; padding: 0 12px; display: flex; align-items: center; transition: color 0.15s; }
+  .password-toggle:hover { color: var(--text); }
+  .auth-footer { font-size: 13px; color: var(--text2); text-align: center; margin-top: 16px; }
+  .auth-footer a { color: var(--blue); cursor: pointer; font-weight: 500; }
+
+  /* ELEGIR RUBRO */
+  #s3 { background: var(--bg2); }
+  .elegir-wrap { padding: 56px 32px; text-align: center; }
+  .elegir-wrap h2 { font-size: 26px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+  .elegir-wrap p { font-size: 15px; color: var(--text2); margin-bottom: 36px; }
+  .rubro-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 16px; cursor: pointer; text-align: center; transition: all 0.2s ease; }
+  .rubro-card:hover { border-color: var(--blue); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(24,95,165,0.1); }
+  .rubro-card .emoji { font-size: 32px; display: block; margin-bottom: 10px; }
+  .rubro-card i { font-size: 30px; color: var(--blue); display: block; margin-bottom: 12px; }
+  .rubro-card .rn { font-size: 14px; font-weight: 500; color: var(--text); }
+  .rubro-card.soon { opacity: 0.4; pointer-events: none; }
+
+  /* USER CHIP */
+  .user-menu-wrap { position: relative; }
+  .user-chip { display: inline-flex; align-items: center; gap: 10px; background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 7px 14px 7px 8px; cursor: pointer; transition: all 0.15s ease; user-select: none; }
+  .user-chip:hover { background: var(--bg); border-color: var(--blue); }
+  .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .user-chip-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .user-chip .ti-chevron-down { font-size: 15px; color: var(--text2); transition: transform 0.2s ease; }
+  .user-chip.open .ti-chevron-down { transform: rotate(180deg); }
+  .user-dropdown { display: none; position: absolute; right: 0; top: calc(100% + 10px); width: 272px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden; z-index: 200; box-shadow: 0 8px 32px rgba(0,0,0,0.12); animation: dropIn 0.15s ease; }
+  .user-dropdown.open { display: block; }
+  .dropdown-header { padding: 16px 18px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+  .dropdown-name { font-size: 15px; font-weight: 600; color: var(--text); }
+  .dropdown-email { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .suscripcion-box { margin: 12px; padding: 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); }
+  .sus-label { font-size: 10px; color: var(--text3); margin-bottom: 8px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+  .sus-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 5px; }
+  .sus-row span { color: var(--text2); }
+  .sus-row strong { color: var(--text); font-weight: 500; }
+  .sus-badge { display: inline-block; background: var(--blue-light); color: var(--blue); font-size: 11px; padding: 2px 10px; border-radius: 20px; font-weight: 500; }
+  .sus-badge.gratis { background: var(--bg3); color: var(--text2); border: 1px solid var(--border2); }
+  .sus-vence { font-size: 11px; color: var(--text3); margin-top: 6px; }
+  .dropdown-actions { padding: 8px; border-top: 1px solid var(--border); }
+  .dropdown-action { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius); font-size: 13px; color: var(--text2); cursor: pointer; transition: all 0.1s ease; font-weight: 500; }
+  .dropdown-action:hover { background: var(--bg2); color: var(--text); }
+  .dropdown-action i { font-size: 17px; }
+  .dropdown-action.danger { color: #c0392b; }
+  .dropdown-action.danger:hover { background: #fff0f0; }
+
+  /* PLANES */
+  #s4 { background: var(--bg2); }
+  .planes-wrap { padding: 40px 28px; max-width: 500px; margin: 0 auto; }
+  .planes-wrap h2 { font-size: 26px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .planes-wrap .sub { font-size: 14px; color: var(--text2); margin-bottom: 32px; }
+  .plan-unico {
+    background: var(--bg); border: 2px solid var(--blue);
+    border-radius: var(--radius-xl); padding: 32px 28px;
+    box-shadow: 0 4px 24px rgba(24,95,165,0.15);
+  }
+  .plan-unico .plan-badge { display: inline-block; background: var(--blue); color: #fff; font-size: 12px; padding: 4px 14px; border-radius: 20px; margin-bottom: 16px; font-weight: 500; }
+  .plan-unico .plan-name { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+  .plan-unico .plan-price { font-size: 38px; font-weight: 700; color: var(--text); letter-spacing: -1px; margin-bottom: 4px; }
+  .plan-unico .plan-price span { font-size: 16px; color: var(--text2); font-weight: 400; }
+  .plan-unico .plan-trial { font-size: 13px; color: var(--green); font-weight: 500; margin-bottom: 20px; }
+  .plan-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .plan-features { }
+  .plan-feature { font-size: 14px; color: var(--text2); padding: 6px 0; display: flex; align-items: flex-start; gap: 10px; line-height: 1.4; }
+  .plan-feature .ok { font-size: 16px; color: var(--green); flex-shrink: 0; margin-top: 1px; }
+
+  /* PAGO */
+  #s5 { background: var(--bg2); }
+  .pago-wrap { min-height: calc(100vh - 65px); display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+  .pago-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 32px 28px; width: 100%; max-width: 420px; }
+  .pago-card h2 { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .pago-card .sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+  .resumen { background: var(--bg2); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
+  .resumen-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text); padding: 4px 0; }
+  .resumen-row.total { font-weight: 600; border-top: 1px solid var(--border); margin-top: 10px; padding-top: 12px; font-size: 15px; }
+  .mp-note { font-size: 12px; color: var(--text3); text-align: center; margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+  /* CONFETTI */
+  #confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 9000; display: none; }
+  .confetti-overlay { display: none; position: fixed; inset: 0; z-index: 9100; background: rgba(0,0,0,0.65); align-items: center; justify-content: center; }
+  .confetti-overlay.show { display: flex; }
+  .confetti-card { background: var(--bg); border-radius: var(--radius-xl); padding: 44px 36px; text-align: center; max-width: 340px; width: 90%; animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+  .confetti-logo-ring { width: 80px; height: 80px; border-radius: 50%; background: var(--blue-light); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+  .confetti-logo-ring svg { width: 42px; height: 42px; }
+  .confetti-card h2 { font-size: 24px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+  .confetti-card p { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 24px; }
+  .confetti-redirect { font-size: 13px; color: var(--text3); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .countdown { font-size: 15px; font-weight: 600; color: var(--blue); }
+
+  /* ACCESO */
+  #s6 { background: var(--bg2); }
+  .acceso-wrap { min-height: calc(100vh - 65px); display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+  .acceso-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 40px 32px; width: 100%; max-width: 460px; text-align: center; }
+  .acceso-logo-ring { width: 80px; height: 80px; border-radius: 50%; background: var(--blue-light); display: flex; align-items: center; justify-content: center; margin: 0 auto 22px; }
+  .acceso-logo-ring svg { width: 42px; height: 42px; }
+  .acceso-card h2 { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+  .acceso-card > p { font-size: 14px; color: var(--text2); line-height: 1.7; margin-bottom: 24px; }
+  .url-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; text-align: left; }
+  .url-box i { color: var(--blue); font-size: 22px; flex-shrink: 0; }
+  .url-text { flex: 1; }
+  .url-label { font-size: 11px; color: var(--text3); margin-bottom: 2px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+  .url-link { font-size: 14px; color: var(--blue); font-family: 'Courier New', monospace; font-weight: 500; }
+
+  /* INSTALL BOX en pantalla acceso */
+  .install-box {
+    background: linear-gradient(135deg, var(--blue-light), #f0f7ff);
+    border: 1px solid rgba(24,95,165,0.2);
+    border-radius: var(--radius-lg); padding: 18px 20px;
+    margin-bottom: 16px; text-align: left;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .install-box i { font-size: 28px; color: var(--blue); flex-shrink: 0; }
+  .install-box-txt { flex: 1; }
+  .install-box-txt strong { display: block; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .install-box-txt span { font-size: 12px; color: var(--text2); }
+  .install-box .btn-install-main { padding: 8px 16px; background: var(--blue); color: #fff; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; flex-shrink: 0; white-space: nowrap; }
+  .install-box .btn-install-main:hover { background: var(--blue-dark); }
+
+  .pasos { text-align: left; border-top: 1px solid var(--border); padding-top: 24px; margin-top: 8px; }
+  .pasos h3 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 14px; }
+  .paso { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
+  .paso-n { width: 24px; height: 24px; border-radius: 50%; background: var(--blue-light); color: var(--blue); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .paso p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  @media (max-width: 600px) {
+    .nav { padding: 12px 16px; }
+    .hero { padding: 56px 20px 48px; }
+    .hero h1 { font-size: 30px; }
+    .rubros-section, .elegir-wrap, .planes-wrap { padding-left: 16px; padding-right: 16px; }
+    .trust-strip { gap: 20px; }
+    .install-box { flex-direction: column; text-align: center; }
+    .install-box-txt { text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div id="install-banner">
+  <i class="ti ti-device-mobile-down"></i>
+  <div class="txt">
+    <strong>Instalá Operix</strong>
+    <span>Accedé desde el escritorio en un clic</span>
+  </div>
+  <div class="install-btns">
+    <button class="btn-install btn-install-yes" onclick="instalarPWA()">Instalar</button>
+    <button class="btn-install btn-install-no" onclick="cerrarBanner()">Ahora no</button>
+  </div>
+</div>
+
+<canvas id="confetti-canvas"></canvas>
+<div class="confetti-overlay" id="confetti-overlay">
+  <div class="confetti-card">
+    <div class="confetti-logo-ring"><svg viewBox="0 0 28 28"><use href="#op-icon"/></svg></div>
+    <h2>¡Bienvenido a Operix!</h2>
+    <p>Tu suscripción está activa. Te llevamos a tu sistema.</p>
+    <div class="confetti-redirect">
+      <i class="ti ti-loader-2" style="font-size:16px;animation:spin 1s linear infinite"></i>
+      Redirigiendo en <span class="countdown" id="countdown">3</span>
+    </div>
+  </div>
+</div>
+
+<svg style="display:none">
+  <symbol id="op-icon" viewBox="0 0 28 28">
+    <circle cx="5"  cy="5"  r="2.8" fill="#185FA5"/>
+    <circle cx="23" cy="5"  r="2.8" fill="#185FA5"/>
+    <circle cx="5"  cy="23" r="2.8" fill="#185FA5"/>
+    <circle cx="23" cy="23" r="2.8" fill="#185FA5"/>
+    <rect x="9"    y="3.5"  width="10" height="3"  rx="1.5" fill="#185FA5" opacity="0.45"/>
+    <rect x="9"    y="21.5" width="10" height="3"  rx="1.5" fill="#185FA5" opacity="0.45"/>
+    <rect x="3.5"  y="9"    width="3"  height="10" rx="1.5" fill="#185FA5" opacity="0.45"/>
+    <rect x="21.5" y="9"    width="3"  height="10" rx="1.5" fill="#185FA5" opacity="0.45"/>
+  </symbol>
+</svg>
+
+<!-- 1. LANDING -->
+<div id="s1" class="screen active">
+  <nav class="nav">
+    <a class="nav-logo" onclick="goTo('s1')"><svg viewBox="0 0 28 28"><use href="#op-icon"/></svg><span>Operix</span></a>
+    <div class="nav-links">
+      <button class="btn btn-sm" onclick="goTo('s2','login')">Ingresar</button>
+      <button class="btn btn-primary btn-sm" onclick="goTo('s2','register')">Crear cuenta</button>
+    </div>
+  </nav>
+  <div class="hero">
+    <h1>Gestioná tu negocio<br>desde <em>un solo lugar</em></h1>
+    <p>Sin instalaciones, sin complicaciones. Stock, ventas y clientes en orden desde el primer día.</p>
+    <div class="hero-btns">
+      <button class="btn btn-lg btn-primary" onclick="goTo('s2','register')">Crear cuenta</button>
+      <button class="btn-outline-dark" onclick="goTo('s2','login')">Ya tengo cuenta</button>
+    </div>
+  </div>
+  <div class="rubros-section">
+    <div class="section-label">Rubros disponibles</div>
+    <div class="rubros-grid" id="rubros-grid-s1">
+      <div class="rubro-card-dark" onclick="goTo('s2','register')"><div class="rn">Lubricentro</div></div>
+      <div class="rubro-card-dark" onclick="goTo('s2','register')"><div class="rn">Vinoteca</div></div>
+      <div class="rubro-card-dark" onclick="goTo('s2','register')"><div class="rn">Almacén</div></div>
+      <div class="rubro-card-dark soon"><div class="rn">Próximamente</div></div>
+    </div>
+  </div>
+  <div class="trust-strip">
+    <div class="trust-item"><i class="ti ti-device-laptop"></i> Sin instalaciones</div>
+    <div class="trust-item"><i class="ti ti-lock"></i> Datos seguros</div>
+    <div class="trust-item"><i class="ti ti-refresh"></i> Siempre actualizado</div>
+    <div class="trust-item"><i class="ti ti-headset"></i> Soporte WhatsApp</div>
+  </div>
+</div>
+
+<!-- 2. REGISTER / LOGIN -->
+<div id="s2" class="screen">
+  <nav class="nav">
+    <a class="nav-logo" onclick="goTo('s1')"><svg viewBox="0 0 28 28"><use href="#op-icon"/></svg><span>Operix</span></a>
+    <button class="btn btn-sm" onclick="history.back()"><i class="ti ti-arrow-left"></i> Volver</button>
+  </nav>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo"><svg viewBox="0 0 28 28"><use href="#op-icon"/></svg><span>Operix</span></div>
+      <div id="form-register">
+        <h2>Crear cuenta</h2>
+        <div class="alert alert-error" id="err-reg"></div>
+        <div class="field"><label>Nombre completo</label><div class="field-3d"><input type="text" id="inp-nombre" placeholder="Carlos García" /></div></div>
+        <div class="field"><label>Email</label><div class="field-3d"><input type="email" id="inp-email" placeholder="carlos@mail.com" /></div></div>
+        <div class="field"><label>Contraseña</label>
+          <div class="field-3d password-wrap">
+            <input type="password" id="pass-reg" placeholder="Mínimo 8 caracteres" />
+            <button class="password-toggle" onclick="togglePass('pass-reg',this)" type="button"><i class="ti ti-eye"></i></button>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:6px;justify-content:center;" id="btn-reg" onclick="registrar()">Crear cuenta</button>
+        <div class="auth-footer">¿Ya tenés cuenta? <a onclick="toggleAuth()">Iniciá sesión</a></div>
+      </div>
+      <div id="form-login" style="display:none;">
+        <h2>Bienvenido</h2>
+        <div class="alert alert-error" id="err-log"></div>
+        <div class="field"><label>Email</label><div class="field-3d"><input type="email" id="inp-email-log" placeholder="carlos@mail.com" /></div></div>
+        <div class="field"><label>Contraseña</label>
+          <div class="field-3d password-wrap">
+            <input type="password" id="pass-log" placeholder="••••••••" />
+            <button class="password-toggle" onclick="togglePass('pass-log',this)" type="button"><i class="ti ti-eye"></i></button>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:6px;justify-content:center;" id="btn-log" onclick="login()">Ingresar</button>
+        <div class="auth-footer">¿No tenés cuenta? <a onclick="toggleAuth()">Registrate</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. ELEGIR RUBRO -->
+<div id="s3" class="screen">
+  <nav class="nav">
+    <a class="nav-logo" onclick="goTo('s1')"><svg viewBox="0 0 28 28"><use href="#op-icon"/></svg><span>Operix</span></a>
+    <div class="nav-links">
+      <div class="user-menu-wrap">
+        <div class="user-chip" id="chip-s3" onclick="toggleMenu('menu-s3','chip-s3')">
+          <div class="user-avatar" id="avatar-s3">?</div>
+          <span class="user-chip-name" id="chipname-s3">Usuario</span>
+          <i class="ti ti-chevron-down"></i>
+        </div>
+        <div class="user-dropdown" id="menu-s3">
+          <div class="dropdown-header"><div class="dropdown-name" id="dd-name-s3">Usuario</div><div class="dropdown-email" id="dd-email-s3"></div></div>
+          <div class="suscripcion-box"><div class="sus-label">Suscripción</div><div class="sus-row"><span>Plan</span><span class="sus-badge gratis">Sin plan</span></div><div class="sus-row"><span>Rubro</span><strong>—</strong></div></div>
+          <div class="dropdown-actions"><div class="dropdown-action danger" onclick="cerrarSesion()"><i class="ti ti-logout"></i> Cerrar sesión</div></div>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <div class="elegir-wrap">
+    <h2>¿Qué tipo de negocio tenés?</h2>
+    <p>Elegí tu rubro para ver los planes disponibles.</p>
+    <div class="rubros-grid" id="rubros-grid-s3" style="max-width:620px;margin:0 auto;">
+      <div class="rubro-card" onclick="elegirRubro('lubricentro','Lubricentro')"><span class="emoji">🔧</span><div class="rn">Lubricentro</div></div>
+      <div class="rubro-card" onclick="elegirRubro('vinoteca','Vinoteca')"><i class="ti ti-bottle"></i><div class="rn">Vinoteca</div></div>
+      <div class="rubro-card" onclick="elegirRubro('almacen','Almacén')"><i class="ti ti-shopping-cart"></i><div class="rn">Almacén</div></div>
+      <div class="rubro-card soon"><i class="ti ti-clock"></i><div class="rn">Próximamente</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. PLANES -->
+<div id="s4" class="screen">
+  <nav class="nav">
+    <a class="nav-logo" onclick="goTo('s1')"><svg viewBox="0 0 28 28"><use href="#op-icon"/></svg><span>Operix</span></a>
+    <div class="nav-links">
+      <div class="user-menu-wrap">
+        <div class="user-chip" id="chip-s4" onclick="toggleMenu('menu-s4','chip-s4')">
+          <div class="user-avatar" id="avatar-s4">?</div>
+          <span class="user-chip-name" id="chipname-s4">Usuario</span>
+          <i class="ti ti-chevron-down"></i>
+        </div>
+        <div class="user-dropdown" id="menu-s4">
+          <div class="dropdown-header"><div class="dropdown-name" id="dd-name-s4">Usuario</div><div class="dropdown-email" id="dd-email-s4"></div></div>
+          <div class="suscripcion-box"><div class="sus-label">Suscripción</div><div class="sus-row"><span>Plan</span><span class="sus-badge gratis">Sin plan</span></div><div class="sus-row"><span>Rubro</span><strong id="sus-rubro-s4">—</strong></div></div>
+          <div class="dropdown-actions"><div class="dropdown-action danger" onclick="cerrarSesion()"><i class="ti ti-logout"></i> Cerrar sesión</div></div>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <div class="planes-wrap">
+    <button class="btn-back" onclick="history.back()"><i class="ti ti-arrow-left"></i> Cambiar rubro</button>
+    <h2 id="planes-titulo">Plan para Lubricentro</h2>
+    <div class="sub" id="planes-sub">Todo lo que necesitás para gestionar tu negocio</div>
+    <div class="plan-unico" id="plan-unico-card">
+      <div class="plan-badge">✦ Plan completo</div>
+      <div class="plan-name" id="plan-nombre">Operix Lubricentro</div>
+      <div class="plan-price" id="plan-precio-display">$29.990<span>/mes</span></div>
+      <div class="plan-trial" id="plan-dias-prueba">✓ 30 días de prueba gratis</div>
+      <hr class="plan-divider">
+      <div class="plan-features" id="plan-features"></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:24px;justify-content:center;padding:14px;" onclick="irAPago()">
+        Probar 30 días gratis
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 5. PAGO -->
+<div id="s5" class="screen">
+  <nav class="nav">
+    <a class="nav-logo" onclick="goTo('s1')"><svg viewBox="0 0 28 28"><use href="#op-icon"/></svg><span>Operix</span></a>
+  </nav>
+  <div class="pago-wrap">
+    <div class="pago-card">
+      <button class="btn-back" onclick="history.back()"><i class="ti ti-arrow-left"></i> Volver</button>
+      <h2>Confirmá tu suscripción</h2>
+      <div class="sub" id="pago-sub">Lubricentro · $29.990/mes</div>
+      <div class="resumen">
+        <div class="resumen-row"><span>Rubro</span><span id="p-rubro">Lubricentro</span></div>
+        <div class="resumen-row"><span>Plan</span><span>Completo</span></div>
+        <div class="resumen-row"><span>Prueba gratis</span><span>30 días</span></div>
+        <div class="resumen-row total"><span>Hoy pagás</span><span>$0</span></div>
+      </div>
+
+      <div style="background:#f0f7ff;border:1px solid rgba(24,95,165,0.2);border-radius:12px;padding:16px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">
+        <i class="ti ti-shield-check" style="font-size:22px;color:#185FA5;flex-shrink:0;"></i>
+        <div><div style="font-size:13px;font-weight:600;color:#111;margin-bottom:2px;">Pago 100% seguro</div><div style="font-size:12px;color:#666;">Procesado por Mercado Pago. Podés pagar con tarjeta, débito o saldo MP.</div></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:4px;justify-content:center;padding:14px;font-size:15px;" id="btn-confirmar">
+        <i class="ti ti-brand-mercado-pago"></i> Pagar con Mercado Pago
+      </button>
+      <div style="font-size:11px;color:#aaa;text-align:center;margin-top:10px;">Al pagar aceptás los términos del servicio de Operix</div>
+    </div>
+  </div>
+</div>
+
+<!-- 6. ACCESO -->
+<div id="s6" class="screen">
+  <nav class="nav">
+    <a class="nav-logo" onclick="goTo('s1')"><svg viewBox="0 0 28 28"><use href="#op-icon"/></svg><span>Operix</span></a>
+    <div class="nav-links">
+      <div class="user-menu-wrap">
+        <div class="user-chip" id="chip-s6" onclick="toggleMenu('menu-s6','chip-s6')">
+          <div class="user-avatar" id="avatar-s6">?</div>
+          <span class="user-chip-name" id="chipname-s6">Usuario</span>
+          <i class="ti ti-chevron-down"></i>
+        </div>
+        <div class="user-dropdown" id="menu-s6">
+          <div class="dropdown-header"><div class="dropdown-name" id="dd-name-s6">Usuario</div><div class="dropdown-email" id="dd-email-s6"></div></div>
+          <div class="suscripcion-box">
+            <div class="sus-label">Suscripción activa</div>
+            <div class="sus-row"><span>Plan</span><span class="sus-badge" id="sus-plan-s6">Completo</span></div>
+            <div class="sus-row"><span>Rubro</span><strong id="sus-rubro-s6">Lubricentro</strong></div>
+            <div class="sus-vence" id="sus-vence-s6"></div>
+          </div>
+          <div class="dropdown-actions">
+            <div class="dropdown-action" onclick="goTo('s3')"><i class="ti ti-refresh"></i> Cambiar rubro</div>
+            <div class="dropdown-action danger" onclick="cerrarSesion()"><i class="ti ti-logout"></i> Cerrar sesión</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <div class="acceso-wrap">
+    <div class="acceso-card">
+      <div class="acceso-logo-ring"><svg viewBox="0 0 28 28"><use href="#op-icon"/></svg></div>
+      <h2>¡Todo listo!</h2>
+      <p id="acc-desc">Tu suscripción está activa.</p>
+
+      <div class="url-box">
+        <i class="ti ti-link"></i>
+        <div class="url-text"><div class="url-label">Tu sistema</div><div class="url-link" id="acc-url">stockpro-liard.vercel.app</div></div>
+        <button class="btn btn-sm" id="copy-btn" onclick="copiar()">Copiar</button>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:24px;justify-content:center;" id="btn-abrir">
+        <i class="ti ti-external-link"></i> Abrir mi sistema
+      </button>
+      <div class="pasos">
+        <h3>Creá un acceso directo en tu escritorio</h3>
+        <div class="paso"><div class="paso-n">1</div><p>Abrí el link de arriba en <strong>Google Chrome</strong>.</p></div>
+        <div class="paso"><div class="paso-n">2</div><p>Hacé clic en los <strong>tres puntitos ···</strong> arriba a la derecha.</p></div>
+        <div class="paso"><div class="paso-n">3</div><p>Tocá <strong>"Guardar y compartir"</strong> → <strong>"Crear acceso directo"</strong>.</p></div>
+        <div class="paso"><div class="paso-n">4</div><p>Tildá la opción <strong>"Abrir como ventana"</strong> y hacé clic en <strong>"Crear"</strong>.</p></div>
+        <div class="paso"><div class="paso-n">5</div><p>¡Listo! Ahora tenés el ícono de <strong>Operix en tu escritorio</strong>. Un clic y entrás directo.</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://fbmcqpuohcaffillaund.supabase.co';
+const SUPA_KEY = 'sb_publishable_Bx24U3RsiRJEukDf3CkbNA_OW8pKiN-';
+const USUARIOS_GRATIS = ['taba265@hotmail.com', 'fabrimacha8@gmail.com']; // emails con acceso gratis
+
+const { createClient } = supabase;
+const sb = createClient(SUPA_URL, SUPA_KEY, {
+  auth: {
+    persistSession: true,
+    storageKey: 'operix-auth',
+    storage: window.localStorage,
+    autoRefreshToken: true,
+    detectSessionInUrl: false
+  }
+});
+
+const URLS = {
+  lubricentro: 'https://stockpro-liard.vercel.app',
+  vinoteca:    'https://stockpro-liard.vercel.app',
+  almacen:     'https://stockpro-liard.vercel.app'
+};
+
+const FEATURES = {
+  lubricentro: ['Productos ilimitados en stock','Registro completo de servicios','Agenda de turnos','Reportes de ventas','Historial por cliente','Alertas de stock bajo','Soporte prioritario por WhatsApp'],
+  vinoteca:    ['Etiquetas y vinos ilimitados','Stock por bodega y variedad','Precios por variedad','Reportes de movimientos','Catálogo PDF imprimible','Alertas de stock bajo','Soporte prioritario por WhatsApp'],
+  almacen:     ['Productos ilimitados','Caja con cierre diario','Cuentas corrientes','Reportes semanales y mensuales','Código de barras / QR','Lista de precios imprimible','Soporte prioritario por WhatsApp'],
+};
+
+let userData = { nombre:'', email:'', id:'' };
+let rubroActual = '';
+let rubroNombreActual = '';
+let currentUrl = '';
+let deferredPrompt = null;
+
+// PWA
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('show');
+});
+
+window.addEventListener('appinstalled', () => {
+  cerrarBanner();
+  const box = document.getElementById('install-box-acceso');
+  if (box) box.style.display = 'none';
+});
+
+function instalarPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(choice => {
+      deferredPrompt = null;
+      cerrarBanner();
+      if (choice.outcome === 'accepted') {
+        const box = document.getElementById('install-box-acceso');
+        if (box) box.style.display = 'none';
+      }
+    });
+  } else {
+    // Mostrar instrucciones manuales
+    const manual = document.getElementById('install-manual');
+    const btn = document.getElementById('btn-instalar-app');
+    if (manual) manual.style.display = manual.style.display === 'none' ? 'block' : 'none';
+    if (btn) btn.textContent = btn.textContent === 'Instalar' ? 'Ver instrucciones ▲' : 'Instalar';
+  }
+}
+function cerrarBanner() {
+  document.getElementById('install-banner').classList.remove('show');
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+}
+
+// CONFIG GLOBAL
+let CONFIG = {
+  precio_plan: '29990',
+  dias_prueba: '30',
+  prueba_activa: 'true',
+  rubros: [
+    {id:'lubricentro',nombre:'Lubricentro',emoji:'🔧',activo:true},
+    {id:'vinoteca',nombre:'Vinoteca',emoji:'🍷',activo:true},
+    {id:'almacen',nombre:'Almacén',emoji:'🛒',activo:true}
+  ]
+};
+
+async function cargarConfig() {
+  try {
+    const { data } = await sb.from('config').select('*');
+    if (data) {
+      data.forEach(row => {
+        if (row.clave === 'rubros') {
+          CONFIG.rubros = JSON.parse(row.valor);
+        } else {
+          CONFIG[row.clave] = row.valor;
+        }
+      });
+    }
+    aplicarConfig();
+  } catch(e) { console.log('Config default'); }
+}
+
+function aplicarConfig() {
+  try {
+  // Precio en pantalla de planes
+  const precioEl = document.getElementById('plan-precio-display');
+  if (precioEl) precioEl.textContent = '$' + parseInt(CONFIG.precio_plan||29990).toLocaleString('es-AR');
+
+  // Dias de prueba
+  const diasEl = document.getElementById('plan-dias-prueba');
+  if (diasEl) {
+    if (CONFIG.prueba_activa === 'true') {
+      diasEl.textContent = '✓ ' + (CONFIG.dias_prueba||30) + ' días de prueba gratis';
+      diasEl.style.display = '';
+    } else {
+      diasEl.style.display = 'none';
+    }
+  }
+
+  // Rubros en elegir rubro
+  const grid3 = document.getElementById('rubros-grid-s3');
+  const grid1 = document.getElementById('rubros-grid-s1');
+  if (grid3) {
+    grid3.innerHTML = CONFIG.rubros.filter(r => r.activo).map(r => `
+      <div class="rubro-card" onclick="elegirRubro('${r.id}','${r.nombre}')">
+        <span class="emoji">${r.emoji}</span>
+        <div class="rn">${r.nombre}</div>
+      </div>
+    `).join('') + '<div class="rubro-card soon"><i class="ti ti-clock"></i><div class="rn">Próximamente</div></div>';
+  }
+  if (grid1) {
+    grid1.innerHTML = CONFIG.rubros.filter(r => r.activo).map(r => `
+      <div class="rubro-card-dark" onclick="goTo('s2','register')">
+        <div class="rn">${r.emoji} ${r.nombre}</div>
+      </div>
+    `).join('') + '<div class="rubro-card-dark soon"><div class="rn">Próximamente</div></div>';
+  }
+  } catch(e) { console.log('Config apply error:', e); }
+}
+
+// CHEQUEAR SESION
+window.addEventListener('load', async () => {
+  await cargarConfig();
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    const { data: perfil } = await sb.from('usuarios').select('*').eq('id', session.user.id).single();
+    userData = { nombre: perfil?.nombre || session.user.email, email: session.user.email, id: session.user.id };
+    actualizarChips();
+    if (perfil?.rubro) {
+      rubroActual = perfil.rubro;
+      rubroNombreActual = perfil.rubro.charAt(0).toUpperCase() + perfil.rubro.slice(1);
+      currentUrl = URLS[perfil.rubro] || URLS.lubricentro;
+      prepararAcceso();
+      showScreen('s6');
+    } else {
+      showScreen('s3');
+    }
+  }
+  setTimeout(() => document.getElementById('s1').classList.add('visible'), 10);
+});
+
+// NAVEGACION CON FADE
+function goTo(id, mode) {
+  history.pushState({ screen:id, mode:mode||null }, '', '');
+  showScreen(id, mode);
+}
+
+function showScreen(id, mode) {
+  const current = document.querySelector('.screen.active');
+  if (current) {
+    current.classList.remove('visible');
+    setTimeout(() => {
+      current.classList.remove('active');
+      activarScreen(id, mode);
+    }, 200);
+  } else {
+    activarScreen(id, mode);
+  }
+  window.scrollTo(0, 0);
+}
+
+function activarScreen(id, mode) {
+  const target = document.getElementById(id);
+  target.classList.add('active');
+  setTimeout(() => target.classList.add('visible'), 10);
+  if (id === 's2' && mode) {
+    document.getElementById('form-register').style.display = mode==='register' ? '' : 'none';
+    document.getElementById('form-login').style.display    = mode==='login'    ? '' : 'none';
+  }
+}
+
+window.addEventListener('popstate', e => {
+  if (e.state && e.state.screen) showScreen(e.state.screen, e.state.mode);
+  else showScreen('s1');
+});
+history.replaceState({ screen:'s1', mode:null }, '', '');
+
+function toggleAuth() {
+  const r = document.getElementById('form-register');
+  const l = document.getElementById('form-login');
+  r.style.display = r.style.display === 'none' ? '' : 'none';
+  l.style.display = l.style.display === 'none' ? '' : 'none';
+}
+
+function togglePass(id, btn) {
+  const input = document.getElementById(id);
+  const hide = input.type === 'password';
+  input.type = hide ? 'text' : 'password';
+  btn.innerHTML = hide ? '<i class="ti ti-eye-off"></i>' : '<i class="ti ti-eye"></i>';
+}
+
+function toggleMenu(menuId, chipId) {
+  document.querySelectorAll('.user-dropdown').forEach(m => { if (m.id !== menuId) m.classList.remove('open'); });
+  document.querySelectorAll('.user-chip').forEach(c => { if (c.id !== chipId) c.classList.remove('open'); });
+  document.getElementById(menuId).classList.toggle('open');
+  document.getElementById(chipId).classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.user-menu-wrap')) {
+    document.querySelectorAll('.user-dropdown').forEach(m => m.classList.remove('open'));
+    document.querySelectorAll('.user-chip').forEach(c => c.classList.remove('open'));
+  }
+});
+
+function actualizarChips() {
+  const n = userData.nombre.trim();
+  const partes = n.split(' ');
+  const corto = partes.length >= 2 ? partes[0]+' '+partes[1][0]+'.' : partes[0];
+  const iniciales = partes.length >= 2 ? (partes[0][0]+partes[1][0]).toUpperCase() : n.substring(0,2).toUpperCase();
+  ['s3','s4','s6'].forEach(s => {
+    const chip    = document.getElementById('chipname-'+s);
+    const avatar  = document.getElementById('avatar-'+s);
+    const ddname  = document.getElementById('dd-name-'+s);
+    const ddemail = document.getElementById('dd-email-'+s);
+    if (chip)    chip.textContent    = corto;
+    if (avatar)  avatar.textContent  = iniciales;
+    if (ddname)  ddname.textContent  = userData.nombre;
+    if (ddemail) ddemail.textContent = userData.email;
+  });
+}
+
+async function registrar() {
+  const nombre = document.getElementById('inp-nombre').value.trim();
+  const email  = document.getElementById('inp-email').value.trim();
+  const pass   = document.getElementById('pass-reg').value;
+  const errEl  = document.getElementById('err-reg');
+  errEl.classList.remove('show');
+  if (!nombre || !email || !pass) { errEl.textContent='Completá todos los campos.'; errEl.classList.add('show'); return; }
+  if (pass.length < 8) { errEl.textContent='La contraseña debe tener al menos 8 caracteres.'; errEl.classList.add('show'); return; }
+  const btn = document.getElementById('btn-reg');
+  btn.textContent = 'Creando cuenta...'; btn.disabled = true;
+  const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { nombre } } });
+  if (error) { errEl.textContent = error.message; errEl.classList.add('show'); btn.innerHTML='Crear cuenta'; btn.disabled=false; return; }
+  if (data.user) {
+    await sb.from('usuarios').insert({ id: data.user.id, nombre, email });
+    userData = { nombre, email, id: data.user.id };
+    actualizarChips();
+    goTo('s3');
+  }
+  btn.innerHTML='Crear cuenta'; btn.disabled=false;
+}
+
+async function login() {
+  const email = document.getElementById('inp-email-log').value.trim();
+  const pass  = document.getElementById('pass-log').value;
+  const errEl = document.getElementById('err-log');
+  errEl.classList.remove('show');
+  const btn = document.getElementById('btn-log');
+  btn.textContent = 'Ingresando...'; btn.disabled = true;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) { errEl.textContent='Email o contraseña incorrectos.'; errEl.classList.add('show'); btn.innerHTML='Ingresar'; btn.disabled=false; return; }
+  const { data: perfil } = await sb.from('usuarios').select('*').eq('id', data.user.id).single();
+  userData = { nombre: perfil?.nombre || email, email, id: data.user.id };
+  actualizarChips();
+  if (perfil?.rubro) {
+    rubroActual = perfil.rubro;
+    rubroNombreActual = perfil.rubro.charAt(0).toUpperCase() + perfil.rubro.slice(1);
+    currentUrl = URLS[perfil.rubro] || URLS.lubricentro;
+    prepararAcceso();
+    goTo('s6');
+  } else {
+    goTo('s3');
+  }
+  btn.innerHTML='Ingresar'; btn.disabled=false;
+}
+
+async function cerrarSesion() {
+  await sb.auth.signOut();
+  userData = { nombre:'', email:'', id:'' };
+  goTo('s1');
+}
+
+function elegirRubro(rubro, nombre) {
+  rubroActual = rubro;
+  rubroNombreActual = nombre;
+  currentUrl = URLS[rubro] || URLS.lubricentro;
+  document.getElementById('planes-titulo').textContent = 'Plan para ' + nombre;
+  document.getElementById('plan-nombre').textContent   = 'Operix ' + nombre;
+  const el = document.getElementById('sus-rubro-s4');
+  if (el) el.textContent = nombre;
+  const featuresEl = document.getElementById('plan-features');
+  featuresEl.innerHTML = (FEATURES[rubro] || []).map(f =>
+    `<div class="plan-feature"><i class="ti ti-check ok"></i>${f}</div>`
+  ).join('');
+  goTo('s4');
+}
+
+function esUsuarioGratis() {
+  return USUARIOS_GRATIS.includes(userData.email);
+}
+
+function irAPago() {
+  var precio = '$' + parseInt(CONFIG.precio_plan||29990).toLocaleString('es-AR') + '/mes';
+  var el1 = document.getElementById('p-rubro');
+  var el2 = document.getElementById('pago-sub');
+  var el3 = document.getElementById('p-precio-total');
+  if(el1) el1.textContent = rubroNombreActual;
+  if(el2) el2.textContent = rubroNombreActual + ' · ' + precio;
+  if(el3) el3.textContent = precio;
+  if (esUsuarioGratis()) {
+    prepararAcceso();
+    guardarPlan();
+    lanzarConfetti();
+  } else {
+    goTo('s5');
+  }
+}
+
+document.getElementById('btn-confirmar').onclick = async function() {
+  const btn = document.getElementById('btn-confirmar');
+  btn.textContent = 'Generando link de pago...';
+  btn.disabled = true;
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const userId = session?.user?.id || userData.id || '';
+
+    const res = await fetch('/api/crear-pago', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rubro: rubroActual,
+        rubroNombre: rubroNombreActual,
+        precio: CONFIG.precio_plan,
+        email: userData.email,
+        userId: userId
+      })
+    });
+
+    const data = await res.json();
+    if (data.init_point) {
+      // En pruebas usar sandbox, en produccion usar init_point
+      window.location.href = data.init_point;
+    } else {
+      throw new Error('No se pudo generar el link de pago');
+    }
+  } catch (err) {
+    console.error(err);
+    btn.innerHTML = '<i class="ti ti-brand-mercado-pago"></i> Pagar con Mercado Pago';
+    btn.disabled = false;
+    alert('Error al generar el pago. Intentá de nuevo.');
+  }
+};
+
+async function guardarPlan() {
+  if (!userData.id) return;
+  const vence = new Date(); vence.setDate(vence.getDate()+30);
+  const diasPrueba = parseInt(CONFIG.dias_prueba) || 30;
+  vence.setDate(vence.getDate() + diasPrueba - 30); // ya sumamos 30 antes
+  await sb.from('usuarios').update({
+    rubro: rubroActual,
+    plan: 'Completo',
+    fecha_inicio: new Date().toISOString(),
+    fecha_vencimiento: vence.toISOString(),
+    activo: true
+  }).eq('id', userData.id);
+}
+
+function prepararAcceso() {
+  document.getElementById('acc-desc').textContent = `Tu suscripción de ${rubroNombreActual} está activa. Guardá el link o instalá la app.`;
+  document.getElementById('acc-url').textContent  = currentUrl.replace('https://','');
+  document.getElementById('btn-abrir').onclick = async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token || '';
+    const refresh = session?.refresh_token || '';
+    const url = currentUrl + '?access_token=' + encodeURIComponent(token) + '&refresh_token=' + encodeURIComponent(refresh);
+    window.open(url, '_blank');
+  };
+  const sp = document.getElementById('sus-plan-s6');
+  const sr = document.getElementById('sus-rubro-s6');
+  const sv = document.getElementById('sus-vence-s6');
+  if (sp) { sp.textContent = 'Completo'; sp.className = 'sus-badge'; }
+  if (sr) sr.textContent = rubroNombreActual;
+  const vence = new Date(); vence.setDate(vence.getDate()+30);
+  if (sv) sv.textContent = 'Prueba gratis hasta el '+vence.toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'});
+
+}
+
+let confettiAnim = null;
+function lanzarConfetti() {
+  const overlay = document.getElementById('confetti-overlay');
+  overlay.classList.add('show');
+  iniciarConfetti();
+  let n = 3;
+  document.getElementById('countdown').textContent = n;
+  const iv = setInterval(() => {
+    n--;
+    document.getElementById('countdown').textContent = n;
+    if (n <= 0) {
+      clearInterval(iv);
+      overlay.classList.remove('show');
+      pararConfetti();
+      goTo('s6');
+      setTimeout(() => window.open(currentUrl,'_blank'), 400);
+    }
+  }, 1000);
+}
+
+function iniciarConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.style.display = 'block';
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const colors = ['#185FA5','#378ADD','#1D9E75','#EF9F27','#D4537E','#ffffff','#63B3ED'];
+  const particles = Array.from({length:150}, () => ({
+    x: Math.random()*canvas.width, y: Math.random()*canvas.height-canvas.height,
+    r: Math.random()*7+3, d: Math.random()*3+1.5,
+    color: colors[Math.floor(Math.random()*colors.length)],
+    tilt: Math.random()*10-10, tiltAngle:0, tiltSpeed: Math.random()*0.12+0.04,
+    shape: Math.random()>0.5?'rect':'circle'
+  }));
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(p => {
+      p.tiltAngle+=p.tiltSpeed; p.y+=p.d+Math.cos(p.tiltAngle)*1.5; p.tilt=Math.sin(p.tiltAngle)*13;
+      if(p.y>canvas.height){p.y=-10;p.x=Math.random()*canvas.width;}
+      ctx.fillStyle=p.color; ctx.beginPath();
+      if(p.shape==='circle'){ctx.arc(p.x+p.tilt/2,p.y,p.r/2,0,Math.PI*2);}
+      else{ctx.rect(p.x+p.tilt,p.y,p.r,p.r*0.6);}
+      ctx.fill();
+    });
+    confettiAnim = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function pararConfetti() {
+  if (confettiAnim) cancelAnimationFrame(confettiAnim);
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+  canvas.style.display = 'none';
+}
+
+function copiar() {
+  const url = 'https://'+document.getElementById('acc-url').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '¡Copiado!';
+    setTimeout(() => btn.textContent = 'Copiar', 2000);
+  });
+}
+</script>
+</body>
+</html>

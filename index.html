@@ -470,12 +470,6 @@
     <a class="nav-logo" onclick="goTo('s1')"><svg viewBox="0 0 28 28"><use href="#op-icon"/></svg><span>Operix</span></a>
     <div class="nav-links">
       <div class="user-menu-wrap">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div id="alerta-vencimiento" style="display:none;background:#FF6B00;color:#fff;font-size:12px;font-weight:600;padding:5px 10px;border-radius:20px;display:none;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;" onclick="irAPagoRenovacion()">
-            <i class="ti ti-bell-ringing" style="font-size:14px;"></i>
-            <span id="alerta-texto">Te quedan X días</span>
-          </div>
-        </div>
         <div class="user-chip" id="chip-s6" onclick="toggleMenu('menu-s6','chip-s6')">
           <div class="user-avatar" id="avatar-s6">?</div>
           <span class="user-chip-name" id="chipname-s6">Usuario</span>
@@ -490,7 +484,6 @@
             <div class="sus-vence" id="sus-vence-s6"></div>
           </div>
           <div class="dropdown-actions">
-            <div class="dropdown-action" id="btn-renovar-dropdown" style="display:none;color:#FF6B00;" onclick="irAPagoRenovacion()"><i class="ti ti-refresh"></i> Renovar suscripción</div>
             <div class="dropdown-action" onclick="goTo('s3')"><i class="ti ti-refresh"></i> Cambiar rubro</div>
             <div class="dropdown-action danger" onclick="cerrarSesion()"><i class="ti ti-logout"></i> Cerrar sesión</div>
           </div>
@@ -664,46 +657,6 @@ function aplicarConfig() {
   } catch(e) { console.log('Config apply error:', e); }
 }
 
-// CHEQUEAR SUSCRIPCION
-function estadoSuscripcion(perfil) {
-  // Usuarios gratis: siempre activo
-  if (esUsuarioGratis()) return { estado: 'activo', diasRestantes: 999 };
-  if (!perfil?.fecha_vencimiento) return { estado: 'sinplan', diasRestantes: 0 };
-
-  const ahora = new Date();
-  const vence = new Date(perfil.fecha_vencimiento);
-  // 3 días de gracia
-  const corte = new Date(vence);
-  corte.setDate(corte.getDate() + 3);
-
-  const msRestantes = corte - ahora;
-  const diasRestantes = Math.ceil((vence - ahora) / (1000 * 60 * 60 * 24));
-
-  if (ahora > corte) return { estado: 'vencido', diasRestantes: 0 };
-  if (diasRestantes <= 5) return { estado: 'porVencer', diasRestantes: diasRestantes };
-  return { estado: 'activo', diasRestantes };
-}
-
-function mostrarAlertaVencimiento(diasRestantes) {
-  const badge = document.getElementById('alerta-vencimiento');
-  const texto = document.getElementById('alerta-texto');
-  const btnRenovar = document.getElementById('btn-renovar-dropdown');
-  if (!badge) return;
-  const msg = diasRestantes <= 0 ? 'Vence hoy' : diasRestantes === 1 ? 'Te queda 1 día' : `Te quedan ${diasRestantes} días`;
-  texto.textContent = msg;
-  badge.style.display = 'flex';
-  if (btnRenovar) btnRenovar.style.display = '';
-}
-
-function irAPagoRenovacion() {
-  var precio = '$' + parseInt(CONFIG.precio_plan||29990).toLocaleString('es-AR') + '/mes';
-  var el1 = document.getElementById('p-rubro');
-  var el2 = document.getElementById('pago-sub');
-  if(el1) el1.textContent = rubroNombreActual;
-  if(el2) el2.textContent = rubroNombreActual + ' · ' + precio;
-  goTo('s5');
-}
-
 // CHEQUEAR SESION
 window.addEventListener('load', async () => {
   await cargarConfig();
@@ -716,15 +669,8 @@ window.addEventListener('load', async () => {
       rubroActual = perfil.rubro;
       rubroNombreActual = perfil.rubro.charAt(0).toUpperCase() + perfil.rubro.slice(1);
       currentUrl = URLS[perfil.rubro] || URLS.lubricentro;
-      const sus = estadoSuscripcion(perfil);
-      if (sus.estado === 'vencido') {
-        irAPagoRenovacion();
-        showScreen('s5');
-      } else {
-        if (sus.estado === 'porVencer') mostrarAlertaVencimiento(sus.diasRestantes);
-        prepararAcceso();
-        showScreen('s6');
-      }
+      prepararAcceso();
+      showScreen('s6');
     } else {
       showScreen('s3');
     }
@@ -849,15 +795,8 @@ async function login() {
     rubroActual = perfil.rubro;
     rubroNombreActual = perfil.rubro.charAt(0).toUpperCase() + perfil.rubro.slice(1);
     currentUrl = URLS[perfil.rubro] || URLS.lubricentro;
-    const sus = estadoSuscripcion(perfil);
-    if (sus.estado === 'vencido') {
-      irAPagoRenovacion();
-      goTo('s5');
-    } else {
-      if (sus.estado === 'porVencer') mostrarAlertaVencimiento(sus.diasRestantes);
-      prepararAcceso();
-      goTo('s6');
-    }
+    prepararAcceso();
+    goTo('s6');
   } else {
     goTo('s3');
   }
@@ -944,20 +883,9 @@ document.getElementById('btn-confirmar').onclick = async function() {
 
 async function guardarPlan() {
   if (!userData.id) return;
+  const vence = new Date(); vence.setDate(vence.getDate()+30);
   const diasPrueba = parseInt(CONFIG.dias_prueba) || 30;
-
-  // Si ya tiene fecha_vencimiento, renovar desde ahí (no pierde días)
-  // Si es primera vez, arrancar desde hoy
-  const { data: perfilActual } = await sb.from('usuarios').select('fecha_vencimiento').eq('id', userData.id).single();
-  let base = new Date();
-  if (perfilActual?.fecha_vencimiento) {
-    const vencActual = new Date(perfilActual.fecha_vencimiento);
-    // Si todavía no venció, extender desde la fecha de vencimiento
-    if (vencActual > base) base = vencActual;
-  }
-  const vence = new Date(base);
-  vence.setDate(vence.getDate() + diasPrueba);
-
+  vence.setDate(vence.getDate() + diasPrueba - 30); // ya sumamos 30 antes
   await sb.from('usuarios').update({
     rubro: rubroActual,
     plan: 'Completo',
@@ -970,7 +898,13 @@ async function guardarPlan() {
 function prepararAcceso() {
   document.getElementById('acc-desc').textContent = `Tu suscripción de ${rubroNombreActual} está activa. Guardá el link o instalá la app.`;
   document.getElementById('acc-url').textContent  = currentUrl.replace('https://','');
-  document.getElementById('btn-abrir').onclick    = () => window.open(currentUrl,'_blank');
+  document.getElementById('btn-abrir').onclick = async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token || '';
+    const refresh = session?.refresh_token || '';
+    const url = currentUrl + '?access_token=' + encodeURIComponent(token) + '&refresh_token=' + encodeURIComponent(refresh);
+    window.open(url, '_blank');
+  };
   const sp = document.getElementById('sus-plan-s6');
   const sr = document.getElementById('sus-rubro-s6');
   const sv = document.getElementById('sus-vence-s6');

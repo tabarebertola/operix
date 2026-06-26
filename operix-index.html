@@ -398,6 +398,33 @@
   </div>
 </div>
 
+<!-- 3b. ELEGIR NEGOCIO (lavadero) -->
+<div id="s3b" class="screen">
+  <nav class="nav">
+    <a class="nav-logo" onclick="goTo('s1')"><svg viewBox="0 0 28 28"><use href="#op-icon"/></svg><span>Operix</span></a>
+    <div class="nav-links">
+      <div class="user-menu-wrap">
+        <div class="user-chip" id="chip-s3b" onclick="toggleMenu('menu-s3b','chip-s3b')">
+          <div class="user-avatar" id="avatar-s3b">?</div>
+          <span class="user-chip-name" id="chipname-s3b">Usuario</span>
+          <i class="ti ti-chevron-down"></i>
+        </div>
+        <div class="user-dropdown" id="menu-s3b">
+          <div class="dropdown-header"><div class="dropdown-name" id="dd-name-s3b">Usuario</div><div class="dropdown-email" id="dd-email-s3b"></div></div>
+          <div class="suscripcion-box"><div class="sus-label">Suscripción</div><div class="sus-row"><span>Plan</span><span class="sus-badge gratis">Sin plan</span></div></div>
+          <div class="dropdown-actions"><div class="dropdown-action danger" onclick="cerrarSesion()"><i class="ti ti-logout"></i> Cerrar sesión</div></div>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <div class="elegir-wrap">
+    <h2>¿Cuál es tu lavadero?</h2>
+    <p>Elegí tu negocio para continuar.</p>
+    <button class="btn-back" style="margin-bottom:24px" onclick="goTo('s3')"><i class="ti ti-arrow-left"></i> Volver</button>
+    <div class="rubros-grid" id="negocios-grid" style="max-width:620px;margin:0 auto;"></div>
+  </div>
+</div>
+
 <!-- 4. PLANES -->
 <div id="s4" class="screen">
   <nav class="nav">
@@ -532,6 +559,10 @@ const sb = createClient(SUPA_URL, SUPA_KEY, {
     detectSessionInUrl: false
   }
 });
+
+const NEGOCIOS_LAVADERO = [
+  { id: "lavadero-dmv", nombre: "Lavadero DMV", url: "https://panel-cyan-chi.vercel.app" }
+];
 
 const URLS = {
   lavadero:    'https://panel-cyan-chi.vercel.app',
@@ -812,16 +843,53 @@ async function cerrarSesion() {
   goTo('s1');
 }
 
-function elegirRubro(rubro, nombre) {
-  rubroActual = rubro;
+function mostrarNegocios() {
+  const grid = document.getElementById('negocios-grid');
+  grid.innerHTML = NEGOCIOS_LAVADERO.map(n => `
+    <div class="rubro-card" onclick="elegirNegocio('${n.id}', '${n.nombre}', '${n.url}')">
+      <span class="emoji">🚗</span>
+      <div class="rn">${n.nombre}</div>
+    </div>
+  `).join('');
+  const chip = document.getElementById('chip-s3b');
+  const avatar = document.getElementById('avatar-s3b');
+  const chipname = document.getElementById('chipname-s3b');
+  const ddname = document.getElementById('dd-name-s3b');
+  const ddemail = document.getElementById('dd-email-s3b');
+  const n = userData.nombre.trim();
+  const partes = n.split(' ');
+  const corto = partes.length >= 2 ? partes[0]+' '+partes[1][0]+'.' : partes[0];
+  const iniciales = partes.length >= 2 ? (partes[0][0]+partes[1][0]).toUpperCase() : n.substring(0,2).toUpperCase();
+  if(chipname) chipname.textContent = corto;
+  if(avatar) avatar.textContent = iniciales;
+  if(ddname) ddname.textContent = userData.nombre;
+  if(ddemail) ddemail.textContent = userData.email;
+  goTo('s3b');
+}
+
+function elegirNegocio(id, nombre, url) {
+  rubroActual = id;
   rubroNombreActual = nombre;
-  currentUrl = URLS[rubro] || URLS.lubricentro;
+  currentUrl = url;
+  elegirRubroFinal(id, nombre);
+}
+
+function elegirRubro(rubro, nombre) {
+  if (rubro === 'lavadero') { mostrarNegocios(); return; }
+  elegirRubroFinal(rubro, nombre);
+}
+
+function elegirRubroFinal(rubro, nombre) {
+  if (!rubroActual) rubroActual = rubro;
+  if (!rubroNombreActual) rubroNombreActual = nombre;
+  if (!currentUrl) currentUrl = URLS[rubro] || URLS.lubricentro;
   document.getElementById('planes-titulo').textContent = 'Plan para ' + nombre;
   document.getElementById('plan-nombre').textContent   = 'Operix ' + nombre;
   const el = document.getElementById('sus-rubro-s4');
   if (el) el.textContent = nombre;
   const featuresEl = document.getElementById('plan-features');
-  featuresEl.innerHTML = (FEATURES[rubro] || []).map(f =>
+  const rubroBase = rubro.startsWith('lavadero') ? 'lavadero' : rubro;
+  featuresEl.innerHTML = (FEATURES[rubroBase] || []).map(f =>
     `<div class="plan-feature"><i class="ti ti-check ok"></i>${f}</div>`
   ).join('');
   goTo('s4');
